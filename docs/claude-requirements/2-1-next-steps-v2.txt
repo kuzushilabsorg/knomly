@@ -1,0 +1,134 @@
+ultrathink ad analyse the following feedback.
+  Also, let me know what you had planned for the next stage based on your roadmap
+  and plans.
+  In the feedback below, why does it mention the async_executor is ffor v2?
+  What exactly is your v2?
+
+  <Feedback and NextSteps>
+  This is the pivotal moment where many frameworks die by trying to become "The Everything App."
+
+**Do NOT try to build 400+ integrations manually.**
+
+If you try to chase n8n’s node count by writing a `NotionProcessor`, `GmailProcessor`, `JiraProcessor`, etc., you will drown in maintenance. n8n has a massive team just to maintain those APIs.
+
+The **"World Class"** approach for Phase 2 is not *Breadth* (Quantity), but **Leverage** (Protocols).
+
+Here is the strategic roadmap for the Next Stage of Implementation.
+
+---
+
+### 1. The Strategy: "The Universal Adapter" vs. "The n8n Trap"
+
+Instead of writing 400 wrappers, you should implement **two specific processors** that unlock the entire ecosystem automatically.
+
+#### **A. The OpenAPI / MCP Processor**
+
+Modern AI agents don't need hand-coded wrappers. They need **Tool Definitions**.
+
+* **The Idea:** Build a single `GenericToolProcessor` that takes an OpenAPI Spec (Swagger) or connects to a **Model Context Protocol (MCP)** server.
+* **The Win:** You give the LLM the `plane.yaml` or `hubspot.yaml` spec. The LLM figures out the API call. You write **one** processor, and you instantly get support for every SaaS product with an API.
+* **Why MCP?** Anthropic and others are standardizing this. If you build an `MCPClientProcessor`, Knomly instantly supports any tool that has an MCP server (Filesystem, GitHub, Postgres, Slack, etc.).
+
+#### **B. The "Function Calling" Loop**
+
+Currently, your `Switch` router is deterministic (`if intent == 'standup'`).
+
+* **The Upgrade:** Implement a **ReAct / dynamic planning loop**.
+* **The Flow:**
+1. User: "Check my calendar and book a slot with Steve."
+2. `PlannerProcessor`: Sees tools `[Calendar, Email]`.
+3. Agent: "I need to call `Calendar.list_events()`."
+4. `ToolProcessor`: Executes.
+5. Agent: "Now I need to call `Email.send()`."
+
+
+
+---
+
+### 2. Immediate Roadmap: Completing the "Kuzushi" Stack
+
+Before going generic, you must prove the value by completing your own "Dogfood" stack. You currently handle **Standups**. You need to handle **Work**.
+
+#### **Step 1: The `PlaneProcessor` (Task Management)**
+
+* **Goal:** "Create a bug ticket for the login issue."
+* **Input:** `ActionFrame` (from LLM) containing `{ title, description, priority }`.
+* **Logic:** Connects to self-hosted Plane API.
+* **Why:** This proves the "Write" capability of your agent.
+
+#### **Step 2: The `TwentyProcessor` (CRM)**
+
+* **Goal:** "Update the Acme deal to 'Negotiation'."
+* **Input:** `ActionFrame` with `{ person_name, deal_stage }`.
+* **Logic:** GraphQL mutation to Twenty CRM.
+* **Complexity:** Requires "Entity Resolution" (Who is "Steve"? What is "Acme"?). This forces you to add a **Memory/Context** lookup step.
+
+#### **Step 3: The `RAGProcessor` (Memory)**
+
+* **Goal:** "What did we discuss with Acme last week?"
+* **Implementation:** Connect to your existing **Qdrant** setup.
+* **Pipeline Spot:** This sits *before* the Intent Router or inside the Query branch.
+
+---
+
+### 3. Proposed Architecture for Phase 2
+
+We move from a "Pipeline of Processors" to a "System of Skills."
+
+```python
+# knomly/pipeline/skills/base.py
+class Skill(ABC):
+    """
+    A Skill is a higher-level abstraction than a Processor.
+    It exposes a set of Tools (functions) to the Agent.
+    """
+    name: str
+    description: str
+    def get_tools(self) -> List[ToolDefinition]: ...
+
+# knomly/pipeline/processors/agent.py
+class AgentProcessor(Processor):
+    """
+    Replaces the simple IntentClassifier.
+    It takes a list of Skills and decides which tool to call.
+    """
+    def __init__(self, skills: List[Skill]):
+        ...
+
+```
+
+**Refined Roadmap Table:**
+
+| Phase | Feature | Component to Build | Value Add |
+| --- | --- | --- | --- |
+| **2.1** | **Task Execution** | `PlaneProcessor`, `TwentyProcessor` | Real work gets done. |
+| **2.2** | **Memory** | `RAGProcessor` (Qdrant) | Contextual awareness ("Who is Steve?"). |
+| **2.3** | **Dynamic Agency** | `AgentProcessor` (Function Calling) | User can ask complex, multi-step questions. |
+| **2.4** | **The Universe** | `MCPClientProcessor` | Instant access to 100+ external tools via standard protocol. |
+
+### 4. Open Source Strategy
+
+To make this successful as an OSS project:
+
+1. **"Bring Your Own Transport":** You nailed this. Document how to add Telegram/Discord in 50 lines of code.
+2. **"Skill Marketplace":** Don't ship 400 integrations. Ship the **framework** for Skills.
+* *Repo Structure:* `knomly-core` (The engine) vs. `knomly-skills` (Community contributed skills like Linear, Notion, Jira).
+* This keeps the core lightweight and stable.
+
+
+
+### Conclusion
+
+**Do not build 400 processors.**
+Build the **`AgentProcessor`** that can use **OpenAPI/MCP** definitions. That is how a team of one competes with a team of fifty.
+
+**Shall we start by implementing the `PlaneProcessor` to close the loop on your internal Project Management use case?**
+  </Feedback and NextSteps>
+
+  Think very carefully. Keep in mind world class standards and eventually
+  integrating most of the SAAS products and tools to create a seamless pipeline
+  based mechanism for bringing and building together seamless interproduct workflows
+  and connections.
+
+  The feedback recommended MCP & other standardisation pratice and usage. Explore
+  all these aspects and let me know 

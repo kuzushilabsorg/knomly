@@ -337,6 +337,8 @@ node_modules/
 docs/_build/
 docs/api/generated/
 
+doc/claude-requirements/
+
 # Benchmark results
 benchmarks/results/
 

@@ -1,0 +1,234 @@
+I want you to focus on the following folder as well :
+  "/Users/paruljuniwal/kuzushi_labs/self-hosted" and
+  "/Users/paruljuniwal/kuzushi_labs/system-infra/self-hosted"
+As we have done so far, we want to bring together a suite of internal tools for kuzushi labs:
+
+  - zulip as replacement for slack
+
+  - plane as replacement for Linear
+
+  - docmost i think as replacement for notion/wiki
+
+  - signoz for telemetry
+
+  - twenty-crm as replacement for zoho/crm
+
+
+
+  Additionally, we also have redis, postgres, mongo, livekit, qdrant and n8n deployed
+
+  for internal usage in addition to other client facing tools with capabilities for
+
+  text and voice interactions.
+
+
+
+Think from first principles.
+
+1. Think of a great name emerging from Kuzushi Labs + Anowmly
+
+2. analyse ManusAI as well and see if this can be something similar.
+
+3. We also have a PRD and product brief as below:
+
+
+
+<Idea and High Level Brief>
+
+AI Agent Team Platform
+
+Your Personal AI Workforce — Conversational, Approachable, Operational
+
+THE PROBLEM
+
+The AI application layer is deeply fragmented. Solopreneurs, professionals, and small teams understand that powerful AI tools exist — voice agents, RAG chatbots, content generators, workflow automation — but face three critical barriers:
+
+• Capability Gap: "I know AI can help, but I don't know what's possible or where to start."
+
+• Operationalization Gap: Tools like n8n, Zapier, and CrewAI are powerful but intimidating for non-technical users.
+
+• Fragmentation Gap: Using 5+ disconnected platforms to achieve what should be one cohesive workflow.
+
+
+
+THE SOLUTION
+
+A conversational platform where users talk to an AI team — joining a "meeting" with specialized AI colleagues who understand context, take briefs, and execute autonomously.
+
+How It Works
+
+1. Onboard via conversation: Tell the platform your goals. It suggests a "starter team" of 5-7 AI agents.
+
+2. Daily standups with AI: Join a Google Meet-style call with your AI team. Brief them, assign tasks, review progress.
+
+3. Agents execute using Kuzushi's toolkit: Zoice.AI for calls, WhatsApp bots for customer comms, content studio for marketing.
+
+4. Human-like, not intimidating: Agents feel like colleagues — casual, personable (inspired by Shapes.Inc's social AI approach).
+
+
+
+MARKET OPPORTUNITY
+
+$7.8B → $236B
+
+AI Agents Market (2025-2034)
+
+CAGR: 45.8%
+
+85%
+
+of enterprises will use
+
+AI agents in 2025
+
+SAM: SMBs + Solopreneurs seeking agent teams without technical complexity
+
+COMPETITIVE LANDSCAPE
+
+Player
+
+Approach
+
+Gap
+
+Lindy.ai
+
+AI employees, no-code, $50/mo
+
+Task-focused, not team-based
+
+Relevance AI
+
+Multi-agent builder, $10K+/yr
+
+Technical, enterprise-focused
+
+CrewAI
+
+Framework for developers
+
+Code-first, high barrier
+
+Shapes.Inc
+
+Social AI bots (180K+ Discord)
+
+Consumer/social, not business ops
+
+n8n / Zapier
+
+Workflow automation
+
+Tool-centric, not agent-centric
+
+KUZUSHI DIFFERENTIATION
+
+• Conversational-first: Talk to your AI team like colleagues, not configure workflows
+
+• Integrated native tools: Zoice.AI, WhatsApp bots, content studio — all accessible through agent orchestration
+
+• Consumer UX + Enterprise power: Shapes-like friendliness with n8n-level capability under the hood
+
+• Template teams: Pre-built agent teams for use cases (D2C launch, upskilling, sales ops)
+
+• India-first: Localized for Indian SMBs, professionals, and solopreneurs
+
+
+
+TARGET USERS & GO-TO-MARKET
+
+Primary Segments
+
+• Solopreneurs wanting AI leverage
+
+• Professionals upskilling in AI
+
+• SMB founders (D2C, services)
+
+• Agencies building for clients
+
+GTM Strategy
+
+• Freemium: 1 agent free, upgrade for teams
+
+• Template marketplace for use cases
+
+• Community-led: Discord + YouTube
+
+• B2B upsell for agency/SMB teams
+
+STRATEGIC FIT WITH KUZUSHI
+
+This platform becomes the unified interface layer for Kuzushi's entire product suite — connecting Zoice.AI, WhatsApp bots, content tools, and healthcare PRM through intelligent agent orchestration. It transforms disparate products into a cohesive AI operating system.
+
+
+
+THE BOTTOM LINE
+
+White Space: No player combines conversational AI team interfaces + native execution tools + consumer-friendly UX for the SMB/solopreneur market.
+
+Confidential | December 2025
+
+
+
+</Idea and High Level Brief>
+
+
+
+Is this feasible with our current self-hosted stack?
+
+How do we connect all these different products tiogether through n8n and make an assistant for business ops and personal productivity using n8n?
+
+
+
+Think from from principles, research and explore this
+
+
+
+
+  Just do a tradeoff and brainstorming + system design session with me.
+
+  Consdier the entire setup of frames:
+  1. "https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/frames/frames.py"
+  2. "https://github.com/pipecat-ai/pipecat/blob/main/src/pipecat/processors/frame_p
+  rocessor.py"
+  Can I repurpose/reuse this construct?
+  I think you are already doing this.
+
+  My requirment is simpler - it is driven by HTTP ideally but I want a pipeline type
+  setup to basically be able to modularise and plug and play different providers,
+  differnt data types and what we will do in our workflows and keep it extremely
+  simple and yet flexible.
+
+  Basically I love the pipeline setup that comes with pipecat which makes it so easy
+  to swap out providers and different aspects in the same pipeline.
+  What evenutally I want is this sort of set of provider integrations which can be
+  plug and play with utmost ease:
+
+  Today for this use case we have -> User -> Whatsapp -> Twilio Whatsapp -> webhook
+  into FastAPI -> Transcription using Gemini -> message via API into Zulip -> return
+  condimraiton to user
+
+  Tomorrow, through this pipeline setup, we can easily swap out Transcription using
+  Gemini to Transcription using Claude and message via API into Zulip as well
+  message via API into Slack.
+
+  So, basically, we also build out over time the set of integrations which pipecat
+  has for different providers -> but we do it for different SAAS products and their
+  APIs which also enriches the developer UX significantly.
+
+  Also, let me know if there is already such integration built out by anyone out
+  there.
+
+  But the objective is to make this framework so so flexbile and easy to work where
+  anyone can come and add their stuff.
+  eg: pipecat now has all the conversational ai related services present in them
+  :"https://github.com/pipecat-ai/pipecat/tree/main/src/pipecat/services"
+
+  ultrathink, review this requirement and assess pipecat code and what you have
+  ijmplemented. Take it to a slightly higher level and focus on design principles
+  and philosophy rather than implementing this directly. Do not delete/remove what
+  you have done. We will build upon it. For now I need you to really really think
+  and come up with a world class approach for this 
+
+  Are you getting what I am saying?

@@ -370,6 +370,11 @@ class TestInMemoryStorage:
 class TestRedisMemory:
     """Tests for RedisMemory with mocked Redis."""
 
+    @pytest.fixture(autouse=True)
+    def skip_without_redis(self):
+        """Skip tests if redis package is not installed."""
+        pytest.importorskip("redis", reason="redis package not installed")
+
     @pytest.fixture
     def mock_redis_client(self):
         """Create mock Redis client."""
