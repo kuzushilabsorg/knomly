@@ -82,7 +82,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -125,7 +125,7 @@ class SpecCache:
                 return None
 
             spec, cached_at = self._cache[url]
-            if datetime.utcnow() - cached_at > self._ttl:
+            if datetime.now(timezone.utc) - cached_at > self._ttl:
                 del self._cache[url]
                 return None
 
@@ -134,7 +134,7 @@ class SpecCache:
     async def set(self, url: str, spec: dict[str, Any]) -> None:
         """Store spec in cache."""
         async with self._lock:
-            self._cache[url] = (spec, datetime.utcnow())
+            self._cache[url] = (spec, datetime.now(timezone.utc))
 
     async def clear(self) -> None:
         """Clear all cached specs."""
@@ -195,7 +195,7 @@ class OperationCache:
                 return None
 
             operation, base_url, cached_at = self._cache[cache_key]
-            if datetime.utcnow() - cached_at > self._ttl:
+            if datetime.now(timezone.utc) - cached_at > self._ttl:
                 del self._cache[cache_key]
                 return None
 
@@ -215,12 +215,12 @@ class OperationCache:
         """
         async with self._lock:
             cache_key = (spec_key, operation_id)
-            self._cache[cache_key] = (operation, base_url, datetime.utcnow())
+            self._cache[cache_key] = (operation, base_url, datetime.now(timezone.utc))
 
     async def get_all_for_spec(self, spec_key: str) -> dict[str, tuple[Any, str]]:
         """Get all cached operations for a spec."""
         async with self._lock:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             result = {}
             for (sk, op_id), (op, base_url, cached_at) in list(self._cache.items()):
                 if sk == spec_key and now - cached_at <= self._ttl:

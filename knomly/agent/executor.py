@@ -62,7 +62,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -189,7 +189,7 @@ class AgentExecutor:
 
         frames: list[Frame] = []
         tools_called: list[str] = []
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         restored_iterations = 0
 
         # Try to restore from memory if session exists

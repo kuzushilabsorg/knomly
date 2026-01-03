@@ -6,7 +6,7 @@ Provides access to MongoDB-stored configuration with caching.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from .schemas import PipelineAuditLog, PromptConfig, UserConfig
@@ -24,13 +24,13 @@ class TTLCache:
     def get(self, key: str) -> Optional[Any]:
         if key in self._cache:
             value, expires = self._cache[key]
-            if datetime.utcnow() < expires:
+            if datetime.now(timezone.utc) < expires:
                 return value
             del self._cache[key]
         return None
 
     def set(self, key: str, value: Any) -> None:
-        expires = datetime.utcnow() + self._ttl
+        expires = datetime.now(timezone.utc) + self._ttl
         self._cache[key] = (value, expires)
 
     def clear(self) -> None:
@@ -137,7 +137,7 @@ class ConfigurationService:
         """
         await self._ensure_connected()
 
-        prompt.updated_at = datetime.utcnow()
+        prompt.updated_at = datetime.now(timezone.utc)
         await self._db.prompts.update_one(
             {"name": prompt.name},
             {"$set": prompt.model_dump()},
@@ -211,7 +211,7 @@ class ConfigurationService:
         """
         await self._ensure_connected()
 
-        user.updated_at = datetime.utcnow()
+        user.updated_at = datetime.now(timezone.utc)
         await self._db.users.update_one(
             {"phone": user.phone},
             {"$set": user.model_dump()},

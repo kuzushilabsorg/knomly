@@ -10,6 +10,10 @@ Design Principle (ADR-005):
     Every decision emits a frame. The processor does NOT execute tools;
     it only decides WHAT to do. Execution is handled by AgentExecutor.
 
+Security:
+    LLM responses are validated with Pydantic to prevent malformed
+    responses from causing unexpected behavior.
+
 Usage:
     processor = AgentProcessor(llm=llm_provider, tools=tool_registry)
 
@@ -31,7 +35,9 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, Optional
+
+from pydantic import BaseModel, Field, ValidationError
 
 from .frames import (
     AgentAction,
@@ -46,6 +52,61 @@ if TYPE_CHECKING:
     from knomly.tools import ToolRegistry
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# LLM Response Schemas (Pydantic Validation)
+# =============================================================================
+
+
+class ToolCallResponse(BaseModel):
+    """Schema for tool_call action from LLM."""
+
+    action: Literal["tool_call"]
+    tool: str = Field(..., min_length=1, description="Name of the tool to call")
+    arguments: dict[str, Any] = Field(default_factory=dict, description="Tool arguments")
+    reasoning: str = Field(default="", description="Why this tool was chosen")
+
+
+class RespondResponse(BaseModel):
+    """Schema for respond action from LLM."""
+
+    action: Literal["respond"]
+    message: str = Field(..., min_length=1, description="Response message to user")
+    reasoning: str = Field(default="", description="Reasoning for this response")
+
+
+class AskUserResponse(BaseModel):
+    """Schema for ask_user action from LLM."""
+
+    action: Literal["ask_user"]
+    question: str = Field(..., min_length=1, description="Question to ask the user")
+    reasoning: str = Field(default="", description="Why clarification is needed")
+
+
+class LLMDecision(BaseModel):
+    """
+    Validated LLM decision schema.
+
+    This is the union type that validates all possible actions.
+    Use model_validate to parse raw JSON from LLM.
+    """
+
+    action: str = Field(..., description="Action type: tool_call, respond, or ask_user")
+    tool: Optional[str] = None
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    message: Optional[str] = None
+    question: Optional[str] = None
+    reasoning: str = Field(default="")
+
+    def is_tool_call(self) -> bool:
+        return self.action == "tool_call" and self.tool is not None
+
+    def is_respond(self) -> bool:
+        return self.action == "respond" and self.message is not None
+
+    def is_ask_user(self) -> bool:
+        return self.action == "ask_user" and self.question is not None
 
 
 # =============================================================================
@@ -369,16 +430,41 @@ class AgentProcessor:
         iteration: int,
         history: list["Frame"],
     ) -> PlanFrame | ToolCallFrame | AgentResponseFrame:
-        """Parse LLM response into appropriate frame."""
+        """
+        Parse and validate LLM response into appropriate frame.
+
+        Uses Pydantic validation to ensure the response conforms to
+        expected schema, preventing malformed responses from causing
+        unexpected behavior.
+        """
         try:
             # Parse JSON response
             data = json.loads(content)
-            action = data.get("action", "").lower()
 
-            if action == "tool_call":
-                tool_name = data.get("tool", "")
-                arguments = data.get("arguments", {})
-                reasoning = data.get("reasoning", "")
+            # Validate with Pydantic schema
+            try:
+                decision = LLMDecision.model_validate(data)
+            except ValidationError as e:
+                logger.warning(
+                    f"[agent_processor] LLM response validation failed: {e.error_count()} errors"
+                )
+                logger.debug(f"[agent_processor] Validation errors: {e.errors()}")
+                # Fall back to raw data if validation fails
+                decision = LLMDecision(
+                    action=data.get("action", ""),
+                    tool=data.get("tool"),
+                    arguments=data.get("arguments", {}),
+                    message=data.get("message"),
+                    question=data.get("question"),
+                    reasoning=data.get("reasoning", ""),
+                )
+
+            action = decision.action.lower()
+
+            if action == "tool_call" and decision.tool:
+                tool_name = decision.tool
+                arguments = decision.arguments
+                reasoning = decision.reasoning
 
                 # Validate tool exists
                 if not self._tools.get(tool_name):
@@ -404,9 +490,9 @@ class AgentProcessor:
                     iteration=iteration,
                 )
 
-            elif action == "respond":
-                message = data.get("message", "")
-                reasoning = data.get("reasoning", "")
+            elif action == "respond" and decision.message:
+                message = decision.message
+                reasoning = decision.reasoning
 
                 logger.info("[agent_processor] Decided to respond to user")
 
@@ -425,9 +511,9 @@ class AgentProcessor:
                     reasoning_trace=reasoning,
                 )
 
-            elif action == "ask_user":
-                question = data.get("question", "")
-                reasoning = data.get("reasoning", "")
+            elif action == "ask_user" and decision.question:
+                question = decision.question
+                reasoning = decision.reasoning
 
                 logger.info("[agent_processor] Decided to ask user for clarification")
 
@@ -440,9 +526,9 @@ class AgentProcessor:
                 )
 
             else:
-                # Unknown action - return planning frame
+                # Unknown action or missing required fields - return planning frame
                 logger.warning(
-                    f"[agent_processor] Unknown action: {action}. "
+                    f"[agent_processor] Unknown/incomplete action: {action}. "
                     f"Returning plan frame."
                 )
                 return PlanFrame(

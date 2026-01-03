@@ -9,11 +9,16 @@ Architecture (v3):
     2. Dynamic Mode (v3): Uses PipelineResolver for database-driven config
 
     The Twilio webhook checks for resolver first, falls back to static pipeline.
+
+Thread Safety:
+    Global instances are protected by locks to prevent race conditions
+    during concurrent initialization (e.g., multiple webhook requests).
 """
 from __future__ import annotations
 
 import logging
 import os
+import threading
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
@@ -28,6 +33,12 @@ from knomly.providers.llm.openai import AnthropicLLMProvider, OpenAILLMProvider
 from knomly.providers.stt.gemini import GeminiSTTProvider
 
 logger = logging.getLogger(__name__)
+
+# Thread locks for safe singleton initialization
+_providers_lock = threading.Lock()
+_config_service_lock = threading.Lock()
+_pipeline_lock = threading.Lock()
+_resolver_lock = threading.Lock()
 
 
 @lru_cache()
@@ -74,50 +85,68 @@ def get_providers() -> ProviderRegistry:
     """
     Get the provider registry with configured providers.
 
-    Initializes providers on first call.
+    Initializes providers on first call using double-checked locking
+    for thread safety.
     """
     global _providers
-    if _providers is None:
+    # Fast path: already initialized
+    if _providers is not None:
+        return _providers
+
+    # Slow path: need to initialize with lock
+    with _providers_lock:
+        # Double-check after acquiring lock
+        if _providers is not None:
+            return _providers
+
         settings = get_settings()
-        _providers = ProviderRegistry()
+        registry = ProviderRegistry()
 
         # Register STT providers
-        if settings.gemini_api_key:
-            _providers.register_stt(
+        # Use .get_secret_value() to extract the actual string from SecretStr
+        gemini_key = settings.gemini_api_key.get_secret_value()
+        if gemini_key:
+            registry.register_stt(
                 "gemini",
-                GeminiSTTProvider(api_key=settings.gemini_api_key),
+                GeminiSTTProvider(api_key=gemini_key),
             )
 
         # Register LLM providers
-        if settings.openai_api_key:
-            _providers.register_llm(
+        openai_key = settings.openai_api_key.get_secret_value() if settings.openai_api_key else ""
+        if openai_key:
+            registry.register_llm(
                 "openai",
-                OpenAILLMProvider(api_key=settings.openai_api_key),
+                OpenAILLMProvider(api_key=openai_key),
             )
-        if settings.anthropic_api_key:
-            _providers.register_llm(
+        anthropic_key = settings.anthropic_api_key.get_secret_value() if settings.anthropic_api_key else ""
+        if anthropic_key:
+            registry.register_llm(
                 "anthropic",
-                AnthropicLLMProvider(api_key=settings.anthropic_api_key),
+                AnthropicLLMProvider(api_key=anthropic_key),
             )
 
         # Register Chat providers
-        if settings.zulip_bot_email and settings.zulip_api_key:
-            _providers.register_chat(
+        zulip_key = settings.zulip_api_key.get_secret_value()
+        if settings.zulip_bot_email and zulip_key:
+            registry.register_chat(
                 "zulip",
                 ZulipChatProvider(
                     site=settings.zulip_site,
                     bot_email=settings.zulip_bot_email,
-                    api_key=settings.zulip_api_key,
+                    api_key=zulip_key,
                 ),
             )
 
         # Set defaults
-        if settings.default_stt_provider in _providers._stt_providers:
-            _providers.set_default_stt(settings.default_stt_provider)
-        if settings.default_llm_provider in _providers._llm_providers:
-            _providers.set_default_llm(settings.default_llm_provider)
-        if settings.default_chat_provider in _providers._chat_providers:
-            _providers.set_default_chat(settings.default_chat_provider)
+        if settings.default_stt_provider in registry._stt_providers:
+            registry.set_default_stt(settings.default_stt_provider)
+        if settings.default_llm_provider in registry._llm_providers:
+            registry.set_default_llm(settings.default_llm_provider)
+        if settings.default_chat_provider in registry._chat_providers:
+            registry.set_default_chat(settings.default_chat_provider)
+
+        # Assign to global only after fully initialized
+        _providers = registry
 
     return _providers
 
@@ -126,15 +155,26 @@ def get_config_service() -> ConfigurationService:
     """
     Get the configuration service.
 
-    Initializes MongoDB connection on first call.
+    Initializes MongoDB connection on first call using double-checked
+    locking for thread safety.
     """
     global _config_service
-    if _config_service is None:
+    # Fast path
+    if _config_service is not None:
+        return _config_service
+
+    # Slow path with lock
+    with _config_service_lock:
+        if _config_service is not None:
+            return _config_service
+
         settings = get_settings()
-        _config_service = ConfigurationService(
-            mongodb_url=settings.mongodb_url,
+        service = ConfigurationService(
+            mongodb_url=settings.mongodb_url.get_secret_value(),
             database_name=settings.mongodb_database,
         )
+        _config_service = service
+
     return _config_service
 
 
@@ -142,12 +182,23 @@ def get_pipeline() -> Pipeline:
     """
     Get the configured standup pipeline.
 
-    Creates pipeline on first call.
+    Creates pipeline on first call using double-checked locking
+    for thread safety.
     """
     global _pipeline
-    if _pipeline is None:
+    # Fast path
+    if _pipeline is not None:
+        return _pipeline
+
+    # Slow path with lock
+    with _pipeline_lock:
+        if _pipeline is not None:
+            return _pipeline
+
         settings = get_settings()
-        _pipeline = create_standup_pipeline(settings)
+        pipeline = create_standup_pipeline(settings)
+        _pipeline = pipeline
+
     return _pipeline
 
 
@@ -196,6 +247,8 @@ def get_resolver() -> "PipelineResolver":
     - File system (development): config/ directory
     - Database (production): MongoDB collections
 
+    Uses double-checked locking for thread safety.
+
     Returns:
         PipelineResolver instance
 
@@ -206,50 +259,57 @@ def get_resolver() -> "PipelineResolver":
     """
     global _resolver
 
+    # Fast path
     if _resolver is not None:
         return _resolver
 
-    from knomly.runtime import PipelineResolver, FileDefinitionLoader, MemoryDefinitionLoader
-    from knomly.adapters.base import ToolBuilder
-    from knomly.adapters.openapi_adapter import OpenAPIToolAdapter
-    from knomly.adapters.service_factory import create_knomly_service_factory
+    # Slow path with lock
+    with _resolver_lock:
+        if _resolver is not None:
+            return _resolver
 
-    settings = get_settings()
+        from knomly.runtime import PipelineResolver, FileDefinitionLoader, MemoryDefinitionLoader
+        from knomly.adapters.base import ToolBuilder
+        from knomly.adapters.openapi_adapter import OpenAPIToolAdapter
+        from knomly.adapters.service_factory import create_knomly_service_factory
 
-    # Determine loader based on environment
-    config_dir = os.getenv("KNOMLY_CONFIG_DIR", "config")
-    config_path = Path(config_dir)
+        settings = get_settings()
 
-    if config_path.exists() and (config_path / "pipelines").exists():
-        logger.info(f"[resolver] Using FileDefinitionLoader: {config_path}")
-        loader = FileDefinitionLoader(config_path)
-    else:
-        logger.info("[resolver] Using MemoryDefinitionLoader (no config dir found)")
-        loader = MemoryDefinitionLoader()
-        # Could seed default config here
+        # Determine loader based on environment
+        config_dir = os.getenv("KNOMLY_CONFIG_DIR", "config")
+        config_path = Path(config_dir)
 
-    # Create tool builder with adapters
-    tool_builder = ToolBuilder(
-        adapters={
-            "openapi": OpenAPIToolAdapter(),
-            # Add more adapters as needed:
-            # "native": NativeToolAdapter(),
-            # "mcp": MCPToolAdapter(),
-        },
-        loader=loader,
-    )
+        if config_path.exists() and (config_path / "pipelines").exists():
+            logger.info(f"[resolver] Using FileDefinitionLoader: {config_path}")
+            loader = FileDefinitionLoader(config_path)
+        else:
+            logger.info("[resolver] Using MemoryDefinitionLoader (no config dir found)")
+            loader = MemoryDefinitionLoader()
+            # Could seed default config here
 
-    # Create service factory
-    service_factory = create_knomly_service_factory()
+        # Create tool builder with adapters
+        tool_builder = ToolBuilder(
+            adapters={
+                "openapi": OpenAPIToolAdapter(),
+                # Add more adapters as needed:
+                # "native": NativeToolAdapter(),
+                # "mcp": MCPToolAdapter(),
+            },
+            loader=loader,
+        )
 
-    # Create resolver
-    _resolver = PipelineResolver(
-        loader=loader,
-        service_factory=service_factory,
-        tool_builder=tool_builder,
-    )
+        # Create service factory
+        service_factory = create_knomly_service_factory()
 
-    logger.info("[resolver] PipelineResolver initialized")
+        # Create resolver
+        resolver = PipelineResolver(
+            loader=loader,
+            service_factory=service_factory,
+            tool_builder=tool_builder,
+        )
+
+        logger.info("[resolver] PipelineResolver initialized")
+        _resolver = resolver
 
     return _resolver
 
@@ -270,16 +330,24 @@ def get_user_secrets(user_id: str) -> dict[str, str]:
     """
     settings = get_settings()
 
+    # Helper to safely extract secret value
+    def _get_secret(secret_str) -> str:
+        if secret_str is None:
+            return ""
+        if hasattr(secret_str, "get_secret_value"):
+            return secret_str.get_secret_value()
+        return str(secret_str)
+
     # For now, return global secrets from environment
     # In production, fetch user-specific secrets from vault
     return {
         # OpenAI / LLM
-        "openai_api_key": settings.openai_api_key or "",
-        "anthropic_api_key": settings.anthropic_api_key or "",
-        "gemini_api_key": settings.gemini_api_key or "",
+        "openai_api_key": _get_secret(settings.openai_api_key),
+        "anthropic_api_key": _get_secret(settings.anthropic_api_key),
+        "gemini_api_key": _get_secret(settings.gemini_api_key),
         # Integrations
         "plane_api_key": os.getenv("KNOMLY_PLANE_API_KEY", ""),
-        "zulip_api_key": settings.zulip_api_key or "",
+        "zulip_api_key": _get_secret(settings.zulip_api_key),
         # STT/TTS
         "deepgram_api_key": os.getenv("KNOMLY_DEEPGRAM_API_KEY", ""),
         "elevenlabs_api_key": os.getenv("KNOMLY_ELEVENLABS_API_KEY", ""),

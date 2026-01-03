@@ -14,14 +14,20 @@ Architecture (v3 Dynamic Configuration):
 
     The mode is determined by KNOMLY_USE_RESOLVER environment variable.
     Default is hybrid: static processors + dynamic tools.
+
+Security:
+    Webhook signature validation is REQUIRED in production.
+    Set KNOMLY_TWILIO_AUTH_TOKEN to enable validation.
+    Set KNOMLY_SKIP_TWILIO_VALIDATION=true to disable (development only).
 """
 from __future__ import annotations
 
 import logging
 import os
 from typing import Any, Dict, List, Optional
+from urllib.parse import urljoin
 
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from knomly.pipeline import PipelineContext
 from knomly.pipeline.transports import TwilioTransport, get_transport, register_transport
@@ -32,6 +38,99 @@ router = APIRouter(prefix="/webhook", tags=["webhooks"])
 
 # Feature flag for v3 resolver
 USE_RESOLVER = os.getenv("KNOMLY_USE_RESOLVER", "true").lower() == "true"
+
+# Security: Twilio signature validation
+TWILIO_AUTH_TOKEN = os.getenv("KNOMLY_TWILIO_AUTH_TOKEN", "")
+SKIP_TWILIO_VALIDATION = os.getenv("KNOMLY_SKIP_TWILIO_VALIDATION", "false").lower() == "true"
+
+
+async def _validate_twilio_signature(request: Request, form_data: Dict[str, Any]) -> bool:
+    """
+    Validate Twilio webhook signature to prevent forged requests.
+
+    Security: This is CRITICAL for production. Without validation,
+    attackers can forge webhook requests and potentially trigger
+    unauthorized actions.
+
+    Args:
+        request: FastAPI request object
+        form_data: Form data from the request
+
+    Returns:
+        True if valid (or validation skipped), False if invalid
+
+    Raises:
+        HTTPException: If validation fails and not in skip mode
+    """
+    # Skip validation in development mode
+    if SKIP_TWILIO_VALIDATION:
+        if os.getenv("KNOMLY_ENVIRONMENT", "development") == "production":
+            logger.warning(
+                "[SECURITY] Twilio signature validation is DISABLED in production! "
+                "Set KNOMLY_SKIP_TWILIO_VALIDATION=false"
+            )
+        return True
+
+    # Require auth token for validation
+    if not TWILIO_AUTH_TOKEN:
+        logger.warning(
+            "[SECURITY] KNOMLY_TWILIO_AUTH_TOKEN not set. "
+            "Webhook signature validation disabled."
+        )
+        return True
+
+    # Get signature from header
+    signature = request.headers.get("X-Twilio-Signature", "")
+    if not signature:
+        logger.warning("[SECURITY] Missing X-Twilio-Signature header")
+        raise HTTPException(status_code=401, detail="Missing Twilio signature")
+
+    try:
+        # Import Twilio validator
+        from twilio.request_validator import RequestValidator
+
+        validator = RequestValidator(TWILIO_AUTH_TOKEN)
+
+        # Build the full URL that Twilio used to sign the request
+        # Must match exactly what Twilio sent
+        url = str(request.url)
+
+        # Handle potential proxy headers
+        forwarded_proto = request.headers.get("X-Forwarded-Proto")
+        forwarded_host = request.headers.get("X-Forwarded-Host")
+
+        if forwarded_proto and forwarded_host:
+            # Reconstruct URL with forwarded headers
+            url = f"{forwarded_proto}://{forwarded_host}{request.url.path}"
+            if request.url.query:
+                url = f"{url}?{request.url.query}"
+
+        # Validate the signature
+        # Form data must be passed as dict with string values
+        params = {k: str(v) for k, v in form_data.items()}
+        is_valid = validator.validate(url, params, signature)
+
+        if not is_valid:
+            logger.warning(
+                f"[SECURITY] Invalid Twilio signature for URL: {url[:100]}"
+            )
+            raise HTTPException(status_code=401, detail="Invalid Twilio signature")
+
+        logger.debug("[SECURITY] Twilio signature validated successfully")
+        return True
+
+    except ImportError:
+        logger.warning(
+            "[SECURITY] twilio package not installed. "
+            "Install with: pip install twilio"
+        )
+        return True
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[SECURITY] Signature validation error: {e}")
+        # Fail closed: reject on validation error
+        raise HTTPException(status_code=401, detail="Signature validation failed")
 
 
 def _normalize_phone(phone: str) -> str:
@@ -184,16 +283,20 @@ async def receive_twilio_webhook(
     Receive and process incoming WhatsApp messages via Twilio.
 
     Handles voice notes by:
-    1. Using TwilioTransport to normalize the webhook payload
-    2. Validating message type (audio only for standup)
-    3. Queuing background pipeline execution
-    4. Returning immediate acknowledgment
+    1. Validating Twilio signature (security)
+    2. Using TwilioTransport to normalize the webhook payload
+    3. Validating message type (audio only for standup)
+    4. Queuing background pipeline execution
+    5. Returning immediate acknowledgment
 
     Non-audio messages receive a help response.
     """
     try:
         form = await request.form()
         form_data = dict(form)
+
+        # Security: Validate Twilio signature
+        await _validate_twilio_signature(request, form_data)
 
         # Extract sender info
         raw_from = str(form.get("From") or "")

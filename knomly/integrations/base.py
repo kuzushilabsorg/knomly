@@ -123,6 +123,10 @@ class IntegrationConfig:
     base_url: str = ""
     timeout: float = 30.0
 
+    # Connection Pool Limits (prevents resource exhaustion)
+    max_connections: int = 100  # Maximum total connections
+    max_keepalive_connections: int = 20  # Connections to keep alive
+
     # Rate limiting
     max_retries: int = 3
     retry_delay: float = 1.0
@@ -222,11 +226,17 @@ class IntegrationClient(ABC):
         ...
 
     async def _get_client(self) -> httpx.AsyncClient:
-        """Get or create the HTTP client."""
+        """Get or create the HTTP client with connection pool limits."""
         if self._client is None or self._client.is_closed:
+            # Configure connection pool limits to prevent resource exhaustion
+            limits = httpx.Limits(
+                max_connections=self.config.max_connections,
+                max_keepalive_connections=self.config.max_keepalive_connections,
+            )
             self._client = httpx.AsyncClient(
                 base_url=self.config.base_url,
                 timeout=self.config.timeout,
+                limits=limits,
                 headers={
                     "Content-Type": "application/json",
                     "Accept": "application/json",

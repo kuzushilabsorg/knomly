@@ -1,0 +1,95 @@
+site_name: Knomly
+site_description: Pipecat-inspired pipeline framework for AI-powered voice and messaging applications
+site_url: https://kuzushi-labs.github.io/knomly/
+repo_url: https://github.com/kuzushi-labs/knomly
+repo_name: kuzushi-labs/knomly
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotate
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            docstring_style: google
+            show_root_heading: true
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quickstart: getting-started/quickstart.md
+  - Core Concepts:
+    - Frames: concepts/frames.md
+    - Processors: concepts/processors.md
+  - Architecture:
+    - ADRs: adr/index.md
+  - API Reference:
+    - Pipeline: api/pipeline.md
+    - Frames: api/frames.md
+    - Processors: api/processors.md
+    - Providers: api/providers.md
+    - Tools: api/tools.md
+  - Guides:
+    - Custom Processors: guides/custom-processor.md
+  - Recipes:
+    - Voice to Chat: recipes/voice-to-chat.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/kuzushi-labs/knomly
+
+copyright: Copyright &copy; 2024 Kuzushi Labs

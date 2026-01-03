@@ -73,19 +73,82 @@ class PipelineCache(Protocol):
 
 
 class InMemoryPipelineCache:
-    """Simple in-memory cache for testing/development."""
+    """
+    In-memory cache with TTL and size limits.
 
-    def __init__(self):
-        self._cache: dict[str, "PipelinePacket"] = {}
+    Uses cachetools.TTLCache if available, falls back to simple dict
+    with manual expiry tracking.
+
+    Configuration:
+        - maxsize: Maximum number of entries (default 1000)
+        - default_ttl: Default TTL in seconds (default 3600 = 1 hour)
+    """
+
+    def __init__(self, maxsize: int = 1000, default_ttl: int = 3600):
+        self._maxsize = maxsize
+        self._default_ttl = default_ttl
+        self._cache: dict[str, tuple["PipelinePacket", float]] = {}  # (value, expiry_time)
+        self._ttl_cache = None
+
+        # Try to use cachetools for proper LRU+TTL
+        try:
+            from cachetools import TTLCache
+            self._ttl_cache = TTLCache(maxsize=maxsize, ttl=default_ttl)
+            logger.debug(f"[cache] Using TTLCache (maxsize={maxsize}, ttl={default_ttl}s)")
+        except ImportError:
+            logger.debug("[cache] cachetools not available, using fallback cache")
 
     async def get(self, key: str) -> "PipelinePacket | None":
-        return self._cache.get(key)
+        """Get cached packet, respecting TTL."""
+        if self._ttl_cache is not None:
+            return self._ttl_cache.get(key)
 
-    async def set(self, key: str, packet: "PipelinePacket", ttl_seconds: int = 3600) -> None:
-        self._cache[key] = packet
+        # Fallback: check manual expiry
+        import time
+        entry = self._cache.get(key)
+        if entry is None:
+            return None
+
+        packet, expiry = entry
+        if time.time() > expiry:
+            # Expired, remove and return None
+            del self._cache[key]
+            return None
+        return packet
+
+    async def set(self, key: str, packet: "PipelinePacket", ttl_seconds: int = 0) -> None:
+        """Store packet with TTL."""
+        ttl = ttl_seconds if ttl_seconds > 0 else self._default_ttl
+
+        if self._ttl_cache is not None:
+            # cachetools handles TTL automatically
+            self._ttl_cache[key] = packet
+            return
+
+        # Fallback: store with expiry timestamp
+        import time
+        expiry = time.time() + ttl
+
+        # Evict oldest if at capacity
+        if len(self._cache) >= self._maxsize and key not in self._cache:
+            # Remove first (oldest) entry
+            oldest_key = next(iter(self._cache))
+            del self._cache[oldest_key]
+
+        self._cache[key] = (packet, expiry)
 
     def clear(self) -> None:
-        self._cache.clear()
+        """Clear all cached entries."""
+        if self._ttl_cache is not None:
+            self._ttl_cache.clear()
+        else:
+            self._cache.clear()
+
+    def __len__(self) -> int:
+        """Return number of cached entries."""
+        if self._ttl_cache is not None:
+            return len(self._ttl_cache)
+        return len(self._cache)
 
 
 class PipelineResolver:
@@ -143,7 +206,8 @@ class PipelineResolver:
         self._loader = loader
         self._service_factory = service_factory
         self._tool_builder = tool_builder
-        self._cache = cache or InMemoryPipelineCache()
+        # Use explicit None check - cache may be falsy when empty (len=0)
+        self._cache = cache if cache is not None else InMemoryPipelineCache()
         self._default_packet = default_packet
 
     async def resolve_for_user(

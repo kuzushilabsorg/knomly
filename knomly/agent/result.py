@@ -24,7 +24,7 @@ Usage:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -150,8 +150,8 @@ def success_result(
         frames=frames,
         iterations=iterations,
         tools_called=tools_called,
-        started_at=started_at or datetime.utcnow(),
-        completed_at=datetime.utcnow(),
+        started_at=started_at or datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc),
     )
 
 
@@ -181,8 +181,8 @@ def timeout_result(
         frames=frames,
         iterations=iterations,
         tools_called=tools_called,
-        started_at=started_at or datetime.utcnow(),
-        completed_at=datetime.utcnow(),
+        started_at=started_at or datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc),
         error_message=f"Agent execution timed out after {timeout_seconds}s",
         error_type="timeout",
     )
@@ -212,8 +212,8 @@ def max_iterations_result(
         frames=frames,
         iterations=max_iterations,
         tools_called=tools_called,
-        started_at=started_at or datetime.utcnow(),
-        completed_at=datetime.utcnow(),
+        started_at=started_at or datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc),
         error_message=f"Agent reached maximum iterations ({max_iterations})",
         error_type="max_iterations",
     )
@@ -245,8 +245,8 @@ def error_result(
         frames=frames,
         iterations=iterations,
         tools_called=tools_called,
-        started_at=started_at or datetime.utcnow(),
-        completed_at=datetime.utcnow(),
+        started_at=started_at or datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc),
         error_message=str(error),
         error_type="unexpected",
     )

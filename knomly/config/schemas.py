@@ -2,13 +2,22 @@
 Configuration Schemas for Knomly.
 
 Pydantic models for configuration data stored in MongoDB.
+
+Security:
+    Sensitive fields use SecretStr to prevent accidental logging
+    of credentials. Access the value with `.get_secret_value()`.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
+
+
+def _utc_now() -> datetime:
+    """Get current UTC time with timezone awareness."""
+    return datetime.now(timezone.utc)
 
 
 class PromptConfig(BaseModel):
@@ -27,8 +36,8 @@ class PromptConfig(BaseModel):
     description: str = Field("", description="Human-readable description")
     version: int = Field(1, description="Prompt version for A/B testing")
     active: bool = Field(True, description="Whether prompt is active")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
 
     class Config:
         extra = "allow"
@@ -57,8 +66,8 @@ class UserConfig(BaseModel):
     timezone: str = Field("Asia/Kolkata", description="User timezone")
     active: bool = Field(True, description="Whether user is active")
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
 
     class Config:
         extra = "allow"
@@ -72,7 +81,7 @@ class PipelineAuditLog(BaseModel):
     """
 
     execution_id: str = Field(..., description="Unique execution identifier")
-    started_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: datetime = Field(default_factory=_utc_now)
     completed_at: Optional[datetime] = None
     duration_ms: float = Field(0.0)
 
@@ -102,6 +111,10 @@ class AppSettings(BaseModel):
     Application settings model.
 
     Used for type-safe settings access.
+
+    Security:
+        API keys and tokens use SecretStr to prevent accidental logging.
+        Access secret values with: settings.api_key.get_secret_value()
     """
 
     # Service identity
@@ -110,23 +123,23 @@ class AppSettings(BaseModel):
     debug: bool = False
 
     # MongoDB
-    mongodb_url: str = Field(..., description="MongoDB connection URL")
+    mongodb_url: SecretStr = Field(..., description="MongoDB connection URL")
     mongodb_database: str = "knomly"
 
-    # Provider API keys
-    gemini_api_key: str = Field(..., description="Google Gemini API key")
-    openai_api_key: Optional[str] = None
-    anthropic_api_key: Optional[str] = None
+    # Provider API keys (SecretStr prevents accidental logging)
+    gemini_api_key: SecretStr = Field(default=SecretStr(""), description="Google Gemini API key")
+    openai_api_key: Optional[SecretStr] = None
+    anthropic_api_key: Optional[SecretStr] = None
 
     # Zulip
-    zulip_site: str = Field(..., description="Zulip server URL")
-    zulip_bot_email: str = Field(..., description="Zulip bot email")
-    zulip_api_key: str = Field(..., description="Zulip bot API key")
+    zulip_site: str = Field(default="", description="Zulip server URL")
+    zulip_bot_email: str = Field(default="", description="Zulip bot email")
+    zulip_api_key: SecretStr = Field(default=SecretStr(""), description="Zulip bot API key")
 
     # Twilio
-    twilio_account_sid: str = Field(..., description="Twilio account SID")
-    twilio_auth_token: str = Field(..., description="Twilio auth token")
-    twilio_whatsapp_number: str = Field(..., description="Twilio WhatsApp number")
+    twilio_account_sid: str = Field(default="", description="Twilio account SID")
+    twilio_auth_token: SecretStr = Field(default=SecretStr(""), description="Twilio auth token")
+    twilio_whatsapp_number: str = Field(default="", description="Twilio WhatsApp number")
 
     # Provider selection
     default_stt_provider: str = "gemini"
