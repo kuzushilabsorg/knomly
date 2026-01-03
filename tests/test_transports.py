@@ -9,7 +9,7 @@ Tests the transport abstraction pattern including:
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from pipeline.transports import (
+from knomly.pipeline.transports import (
     SendResult,
     TransportAdapter,
     TransportNotFoundError,
@@ -21,7 +21,7 @@ from pipeline.transports import (
     register_transport,
     reset_transport_registry,
 )
-from pipeline.frames import AudioInputFrame
+from knomly.pipeline.frames import AudioInputFrame
 
 
 # =============================================================================

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/kuzushi-labs/knomly#readme
+    about: Check the documentation before opening an issue
+  - name: Discussions
+    url: https://github.com/kuzushi-labs/knomly/discussions
+    about: Ask questions and discuss ideas
+  - name: Security Issues
+    url: https://github.com/kuzushi-labs/knomly/security/policy
+    about: Report security vulnerabilities privately

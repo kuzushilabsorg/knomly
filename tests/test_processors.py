@@ -589,7 +589,7 @@ class TestConfirmationProcessor:
 
     @pytest.mark.asyncio
     async def test_sends_confirmation_for_success(self, processor):
-        from pipeline.transports import SendResult
+        from knomly.pipeline.transports import SendResult
 
         frame = ZulipMessageFrame(
             stream="standup",
@@ -613,7 +613,7 @@ class TestConfirmationProcessor:
 
     @pytest.mark.asyncio
     async def test_handles_error_frame(self, processor):
-        from pipeline.transports import SendResult
+        from knomly.pipeline.transports import SendResult
 
         frame = ErrorFrame(
             error_type="network",
