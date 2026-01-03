@@ -1,0 +1,87 @@
+[
+    {
+        "name": "list_projects",
+        "description": "List all projects in the Plane workspace",
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        },
+        "source": "openapi",
+        "source_config": {
+            "spec_url": "https://api.plane.so/api/v1/openapi.json",
+            "operation_id": "listProjects",
+            "auth_type": "bearer",
+            "auth_secret_key": "plane_api_key",
+            "base_url": "https://api.plane.so"
+        },
+        "enabled": true,
+        "read_only": true,
+        "tags": ["plane", "project"]
+    },
+    {
+        "name": "create_issue",
+        "description": "Create a new issue/task in a Plane project",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string",
+                    "description": "The project ID to create the issue in"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Title of the issue"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Detailed description of the issue"
+                },
+                "priority": {
+                    "type": "string",
+                    "enum": ["urgent", "high", "medium", "low", "none"],
+                    "description": "Issue priority"
+                }
+            },
+            "required": ["project_id", "name"]
+        },
+        "source": "openapi",
+        "source_config": {
+            "spec_url": "https://api.plane.so/api/v1/openapi.json",
+            "operation_id": "createIssue",
+            "auth_type": "bearer",
+            "auth_secret_key": "plane_api_key",
+            "base_url": "https://api.plane.so"
+        },
+        "enabled": true,
+        "read_only": false,
+        "destructive": false,
+        "requires_confirmation": true,
+        "tags": ["plane", "issue", "create"]
+    },
+    {
+        "name": "list_issues",
+        "description": "List issues in a Plane project",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string",
+                    "description": "The project ID to list issues from"
+                }
+            },
+            "required": ["project_id"]
+        },
+        "source": "openapi",
+        "source_config": {
+            "spec_url": "https://api.plane.so/api/v1/openapi.json",
+            "operation_id": "listIssues",
+            "auth_type": "bearer",
+            "auth_secret_key": "plane_api_key",
+            "base_url": "https://api.plane.so"
+        },
+        "enabled": true,
+        "read_only": true,
+        "tags": ["plane", "issue", "list"]
+    }
+]

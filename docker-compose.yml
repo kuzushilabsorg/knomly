@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  knomly:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: knomly
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      # Service
+      - KNOMLY_SERVICE_NAME=knomly
+      - KNOMLY_ENVIRONMENT=production
+      - KNOMLY_DEBUG=false
+
+      # MongoDB connection
+      - KNOMLY_MONGODB_URL=mongodb://mongodb:27017
+      - KNOMLY_MONGODB_DATABASE=knomly
+
+      # Provider API Keys (set in .env file)
+      - KNOMLY_GEMINI_API_KEY=${KNOMLY_GEMINI_API_KEY}
+      - KNOMLY_OPENAI_API_KEY=${KNOMLY_OPENAI_API_KEY}
+      - KNOMLY_ANTHROPIC_API_KEY=${KNOMLY_ANTHROPIC_API_KEY}
+
+      # Zulip (configure with your Zulip instance)
+      - KNOMLY_ZULIP_SITE=${KNOMLY_ZULIP_SITE:-https://your-zulip.example.com}
+      - KNOMLY_ZULIP_BOT_EMAIL=${KNOMLY_ZULIP_BOT_EMAIL}
+      - KNOMLY_ZULIP_API_KEY=${KNOMLY_ZULIP_API_KEY}
+
+      # Twilio
+      - KNOMLY_TWILIO_ACCOUNT_SID=${KNOMLY_TWILIO_ACCOUNT_SID}
+      - KNOMLY_TWILIO_AUTH_TOKEN=${KNOMLY_TWILIO_AUTH_TOKEN}
+      - KNOMLY_TWILIO_WHATSAPP_NUMBER=${KNOMLY_TWILIO_WHATSAPP_NUMBER}
+
+      # Provider selection
+      - KNOMLY_DEFAULT_STT_PROVIDER=gemini
+      - KNOMLY_DEFAULT_LLM_PROVIDER=openai
+      - KNOMLY_DEFAULT_CHAT_PROVIDER=zulip
+    networks:
+      - knomly-network
+    depends_on:
+      - mongodb
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # MongoDB for Knomly
+  mongodb:
+    image: mongo:7.0
+    container_name: knomly-mongodb
+    restart: unless-stopped
+    volumes:
+      - knomly-mongodb-data:/data/db
+    networks:
+      - knomly-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  knomly-network:
+    driver: bridge
+
+volumes:
+  knomly-mongodb-data:

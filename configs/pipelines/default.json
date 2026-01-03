@@ -1,0 +1,35 @@
+{
+    "session": {
+        "session_id": "placeholder",
+        "user_id": "placeholder",
+        "locale": "en-US",
+        "metadata": {}
+    },
+    "agent": {
+        "system_prompt": "You are a helpful voice assistant. You can help with standup updates, task management, and team coordination. Be concise and action-oriented.",
+        "welcome_message": "Hello! I'm your AI assistant. How can I help you today?",
+        "voice_id": "alloy"
+    },
+    "providers": {
+        "stt": {
+            "provider_type": "stt",
+            "provider_code": "deepgram",
+            "params": {
+                "model": "nova-2",
+                "language": "en"
+            },
+            "auth_secret_key": "deepgram_api_key"
+        },
+        "llm": {
+            "provider_type": "llm",
+            "provider_code": "openai",
+            "params": {
+                "model": "gpt-4o",
+                "temperature": 0.7
+            },
+            "auth_secret_key": "openai_api_key"
+        }
+    },
+    "tools": [],
+    "params": {}
+}

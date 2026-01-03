@@ -1,0 +1,23 @@
+# Knomly Dependencies
+
+# Web Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+httpx>=0.25.0
+pydantic>=2.5.0
+
+# Database
+motor>=3.3.0  # Async MongoDB driver
+
+# Providers
+google-generativeai>=0.3.0  # Gemini STT
+openai>=1.3.0  # OpenAI LLM
+anthropic>=0.7.0  # Anthropic LLM
+twilio>=8.10.0  # WhatsApp messaging
+
+# Audio Processing
+pydub>=0.25.0  # Audio format conversion
+
+# Utilities
+python-multipart>=0.0.6  # Form data parsing
+python-dotenv>=1.0.0  # Environment loading

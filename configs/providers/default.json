@@ -1,0 +1,67 @@
+{
+    "stt": {
+        "deepgram": {
+            "provider_type": "stt",
+            "provider_code": "deepgram",
+            "params": {
+                "model": "nova-2",
+                "language": "en",
+                "punctuate": true,
+                "smart_format": true
+            },
+            "auth_secret_key": "deepgram_api_key"
+        },
+        "gemini": {
+            "provider_type": "stt",
+            "provider_code": "gemini",
+            "params": {
+                "model": "gemini-1.5-flash",
+                "language": "en"
+            },
+            "auth_secret_key": "gemini_api_key"
+        }
+    },
+    "llm": {
+        "openai": {
+            "provider_type": "llm",
+            "provider_code": "openai",
+            "params": {
+                "model": "gpt-4o",
+                "temperature": 0.7,
+                "max_tokens": 4096
+            },
+            "auth_secret_key": "openai_api_key"
+        },
+        "anthropic": {
+            "provider_type": "llm",
+            "provider_code": "anthropic",
+            "params": {
+                "model": "claude-3-5-sonnet-20241022",
+                "temperature": 0.7,
+                "max_tokens": 4096
+            },
+            "auth_secret_key": "anthropic_api_key"
+        }
+    },
+    "tts": {
+        "elevenlabs": {
+            "provider_type": "tts",
+            "provider_code": "elevenlabs",
+            "params": {
+                "voice_id": "21m00Tcm4TlvDq8ikWAM",
+                "model_id": "eleven_multilingual_v2"
+            },
+            "auth_secret_key": "elevenlabs_api_key"
+        }
+    },
+    "chat": {
+        "zulip": {
+            "provider_type": "chat",
+            "provider_code": "zulip",
+            "params": {
+                "site": "${KNOMLY_ZULIP_SITE}"
+            },
+            "auth_secret_key": "zulip_api_key"
+        }
+    }
+}
