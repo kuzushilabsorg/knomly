@@ -324,4 +324,3 @@ Processors can access their platform-specific config if available.
 ## References
 
 - [Pipecat Services Architecture](https://github.com/pipecat-ai/pipecat)
-- [ADR-001: HTTP Pipeline Adaptation](../architecture/ADR-001-HTTP-PIPELINE-ADAPTATION.md)

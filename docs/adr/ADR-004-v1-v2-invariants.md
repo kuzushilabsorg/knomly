@@ -289,6 +289,5 @@ The discipline cost is intentional. When it's "hard" to hide state in context, d
 
 ## References
 
-- [ADR-001: HTTP Pipeline Adaptation](../architecture/ADR-001-HTTP-PIPELINE-ADAPTATION.md)
 - [ADR-003: Integration Pattern](./ADR-003-integration-pattern.md)
 - [Pipecat Frame Design](https://github.com/pipecat-ai/pipecat)
