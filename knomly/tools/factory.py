@@ -48,6 +48,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
@@ -263,7 +264,7 @@ class ConditionalToolFactory:
     def __init__(
         self,
         inner: ToolFactory,
-        condition: callable[[ToolContext], bool],
+        condition: Callable[[ToolContext], bool],
     ) -> None:
         """
         Initialize with inner factory and condition.
@@ -289,7 +290,7 @@ class ConditionalToolFactory:
 
 def extract_tool_context_from_frame(
     frame: Any,
-    secret_provider: callable[[str], dict[str, str]] | None = None,
+    secret_provider: Callable[[str], dict[str, str]] | None = None,
 ) -> ToolContext:
     """
     Extract ToolContext from a Frame's metadata.
@@ -332,14 +333,12 @@ def extract_tool_context_from_frame(
 
     # SECURITY: Never extract secrets from frame metadata
     # Use the secret_provider callback instead
+    secrets: dict[str, str] = {}
     if secret_provider is not None:
         try:
             secrets = secret_provider(user_id)
         except Exception as e:
             logger.warning(f"[tool_factory] Secret provider failed: {e}")
-            secrets = {}
-    else:
-        secrets = {}
 
     # Log warning if someone tried to put secrets in frame (legacy/mistake)
     if "secrets" in metadata:

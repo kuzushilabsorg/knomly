@@ -18,8 +18,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from functools import wraps
+from typing import Any, ParamSpec, Protocol, TypeVar
+
+P = ParamSpec("P")
+T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
 
@@ -441,11 +446,11 @@ class SlidingWindowLimiter:
 
 def rate_limited(
     limiter: RateLimiter | SlidingWindowLimiter,
-    key_func: callable | str,
+    key_func: Callable[..., str] | str,
     cost: float = 1.0,
     block: bool = True,
     timeout: float | None = None,
-):
+) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T]]]:
     """
     Decorator for rate limiting async functions.
 
@@ -461,16 +466,18 @@ def rate_limited(
             ...
     """
 
-    def decorator(func):
-        async def wrapper(*args, **kwargs):
+    def decorator(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
+        @wraps(func)
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             # Resolve key
             key = key_func(*args, **kwargs) if callable(key_func) else key_func
 
-            # Apply rate limit
+            # Apply rate limit (handle different limiter signatures)
             if block:
-                success = await limiter.wait(
-                    key, cost if hasattr(limiter, "wait") and cost else 1.0, timeout
-                )
+                if isinstance(limiter, RateLimiter):
+                    success = await limiter.wait(key, cost, timeout)
+                else:
+                    success = await limiter.wait(key, timeout)
                 if not success:
                     raise RateLimitExceeded(
                         key=key,
@@ -478,7 +485,10 @@ def rate_limited(
                         window=getattr(limiter, "window_seconds", 1.0),
                     )
             else:
-                success = await limiter.acquire(key, cost if hasattr(limiter, "acquire") else 1.0)
+                if isinstance(limiter, RateLimiter):
+                    success = await limiter.acquire(key, cost)
+                else:
+                    success = await limiter.acquire(key)
                 if not success:
                     raise RateLimitExceeded(
                         key=key,
@@ -517,7 +527,7 @@ class CompositeRateLimiter:
         ])
     """
 
-    limiters: list[tuple[RateLimiter | SlidingWindowLimiter, callable]]
+    limiters: list[tuple[RateLimiter | SlidingWindowLimiter, Callable[[Any], str]]]
 
     async def acquire(self, context: Any) -> bool:
         """
