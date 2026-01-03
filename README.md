@@ -6,21 +6,78 @@
 [![Tests](https://github.com/kuzushi-labs/knomly/actions/workflows/test.yml/badge.svg)](https://github.com/kuzushi-labs/knomly/actions/workflows/test.yml)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-**Knomly** is a Pipecat-inspired pipeline framework for building AI-powered voice and messaging applications.
+**Knomly** is a Pythonic pipeline framework for building composable, event-driven workflows with first-class SaaS integrations.
 
-Build modular, type-safe pipelines that process audio, text, and other data through configurable processors with support for any messaging platform.
+Inspired by [Pipecat's](https://github.com/pipecat-ai/pipecat) elegant architecture, Knomly generalizes the pattern beyond conversational AI to **any domain** — ETL pipelines, webhook handlers, batch processing, agent workflows, and yes, voice applications too.
 
-## Features
+## The Vision
 
-- **Modular Pipeline Architecture** - Compose complex workflows from simple processors
-- **Type-Safe Frames** - Immutable data containers with full type hints
-- **Flexible Routing** - Conditional, Switch, TypeRouter, Guard, and FanOut patterns
-- **Transport Abstraction** - Support any messaging platform (WhatsApp, Telegram, Slack)
-- **Provider System** - Pluggable STT, LLM, and Chat integrations
-- **Agent Layer** - ReAct-style agent execution with tool calling
-- **Multi-Tenancy** - Per-user configuration and credential management
-- **Built-in Resilience** - Retry policies, circuit breakers, rate limiting
-- **Observability** - Structured logging, metrics, and distributed tracing
+```
+Today:    Webhook → Transcribe (Gemini) → Notify (Zulip) → Confirm
+Tomorrow: Webhook → Transcribe (Claude) → Notify (Slack + Zulip) → Create Task (Plane) → Confirm
+                              ↑                    ↑                        ↑
+                          one-line swap      one-line add              one-line add
+```
+
+**Swap any component. Add any integration. Zero coupling.**
+
+## Philosophy
+
+### Everything is a Frame
+
+Frames are immutable data containers that flow through pipelines. A frame can hold anything — audio, text, JSON, database records, API responses, events.
+
+```python
+frame = Frame.create("webhook", data={"event": "push", "repo": "knomly"})
+frame = Frame.create("audio", data={"bytes": audio_data, "mime": "audio/ogg"})
+frame = Frame.create("task", data={"title": "Fix bug", "project": "Mobile"})
+```
+
+### Processors are Pure Transformations
+
+A processor takes a frame, transforms it, returns a frame. That's it.
+
+```python
+class MyProcessor(Processor):
+    async def process(self, frame: Frame, ctx: Context) -> Frame | None:
+        # Transform → Return
+        return frame.derive(data={**frame.data, "processed": True})
+```
+
+### Pipelines are Composable
+
+Chain processors like LEGO blocks. Route conditionally. Fan out in parallel.
+
+```python
+pipeline = Pipeline([
+    ValidateInput(),
+    Conditional(
+        when=lambda f: f.data.get("type") == "audio",
+        then=Pipeline([Transcribe(), ExtractIntent()]),
+        else=Pipeline([ParseText()]),
+    ),
+    CreateTask(provider="plane"),
+    Notify(provider="zulip"),
+])
+```
+
+### Integrations are First-Class
+
+Every SaaS product is a potential integration. Swap providers without changing pipeline logic.
+
+```python
+# Version 1: Gemini + Zulip
+pipeline = Pipeline([
+    Transcribe(provider="gemini"),
+    Notify(provider="zulip"),
+])
+
+# Version 2: Claude + Slack (one-line changes)
+pipeline = Pipeline([
+    Transcribe(provider="anthropic"),  # ← swapped
+    Notify(provider="slack"),          # ← swapped
+])
+```
 
 ## Installation
 
@@ -31,51 +88,134 @@ pip install knomly
 With optional dependencies:
 
 ```bash
-# All features
+# Full installation
 pip install knomly[full]
 
-# Specific providers
-pip install knomly[stt-whisper,llm-openai,transport-twilio]
+# Specific integrations
+pip install knomly[llm-openai,llm-anthropic,chat-zulip,transport-twilio]
 
 # Development
 pip install knomly[dev]
+```
+
+## Use Cases
+
+Knomly is **domain-agnostic**. Here are examples across different domains:
+
+### Voice-to-Chat (Conversational AI)
+
+```python
+pipeline = Pipeline([
+    DownloadAudio(),
+    Transcribe(provider="gemini"),
+    ExtractIntent(provider="openai"),
+    Conditional(
+        when=lambda f: f.data["intent"] == "create_task",
+        then=CreateTask(provider="plane"),
+    ),
+    PostMessage(provider="zulip"),
+    SendConfirmation(provider="twilio"),
+])
+```
+
+### Webhook Event Processing
+
+```python
+pipeline = Pipeline([
+    ParseWebhook(schema=GitHubPushEvent),
+    Conditional(
+        when=lambda f: f.data["ref"] == "refs/heads/main",
+        then=Pipeline([
+            TriggerBuild(provider="github_actions"),
+            Notify(provider="slack", channel="#deployments"),
+        ]),
+    ),
+])
+```
+
+### ETL Pipeline
+
+```python
+pipeline = Pipeline([
+    FetchFromAPI(provider="salesforce", query="SELECT * FROM Lead"),
+    Transform(enrich_leads),
+    ValidateSchema(schema=LeadSchema),
+    LoadToDatabase(provider="postgres", table="leads"),
+    Notify(provider="slack", message="ETL complete: {count} records"),
+])
+```
+
+### Batch Processing
+
+```python
+pipeline = Pipeline([
+    ListFiles(provider="s3", bucket="uploads", pattern="*.csv"),
+    FanOut(
+        processor=Pipeline([
+            DownloadFile(),
+            ParseCSV(),
+            ValidateRows(),
+            InsertToDatabase(),
+        ]),
+        strategy="parallel",
+        max_concurrency=10,
+    ),
+    AggregateResults(),
+    SendReport(provider="email"),
+])
+```
+
+### Agent Workflow (Tool Calling)
+
+```python
+pipeline = Pipeline([
+    ParseUserRequest(),
+    AgentBridge(
+        llm=OpenAILLM(),
+        tools=[
+            PlaneCreateTask(),
+            ZulipSendMessage(),
+            SlackPostMessage(),
+        ],
+        max_iterations=5,
+    ),
+    FormatResponse(),
+])
 ```
 
 ## Quick Start
 
 ```python
 import asyncio
-from knomly import Pipeline, PipelineBuilder, Processor, PipelineContext
-from knomly.pipeline.frames import Frame
+from knomly import Pipeline, Processor, Frame, PipelineContext
 
-class UppercaseProcessor(Processor):
+class Uppercase(Processor):
     @property
     def name(self) -> str:
         return "uppercase"
 
     async def process(self, frame: Frame, ctx: PipelineContext) -> Frame:
-        return frame.derive(text=frame.text.upper())
+        text = frame.data.get("text", "")
+        return frame.derive(data={"text": text.upper()})
 
-class WordCountProcessor(Processor):
+class AddTimestamp(Processor):
     @property
     def name(self) -> str:
-        return "word_count"
+        return "timestamp"
 
     async def process(self, frame: Frame, ctx: PipelineContext) -> Frame:
-        return frame.derive(count=len(frame.text.split()))
+        from datetime import datetime
+        return frame.derive(data={**frame.data, "processed_at": datetime.now().isoformat()})
 
 # Build pipeline
-pipeline = (
-    PipelineBuilder()
-    .add(UppercaseProcessor())
-    .add(WordCountProcessor())
-    .build()
-)
+pipeline = Pipeline([Uppercase(), AddTimestamp()])
 
 # Execute
 async def main():
-    result = await pipeline.execute(initial_frame)
-    print(f"Success: {result.success}")
+    frame = Frame.create("text", data={"text": "hello world"})
+    result = await pipeline.execute(frame)
+    print(result.frames[-1].data)
+    # {'text': 'HELLO WORLD', 'processed_at': '2024-01-15T10:30:00'}
 
 asyncio.run(main())
 ```
@@ -84,234 +224,415 @@ asyncio.run(main())
 
 ### Frames
 
-Frames are immutable data containers that flow through the pipeline:
+Frames are immutable, typed containers for any data:
 
 ```python
-from knomly.pipeline.frames import AudioInputFrame, TranscriptionFrame
+from knomly.pipeline.frames import Frame
 
-# Create a frame
-frame = AudioInputFrame(
-    media_url="https://example.com/audio.ogg",
-    mime_type="audio/ogg",
-    sender_phone="919876543210",
-)
+# Generic frame
+frame = Frame.create("event", data={"type": "user.created", "user_id": 123})
 
-# Derive a new frame (immutable)
-new_frame = frame.derive(text="transcribed text")
+# Derive new frame (immutable)
+new_frame = frame.derive(data={**frame.data, "processed": True})
+
+# With metadata
+frame = Frame.create("task", data=task_data, metadata={"tenant_id": "acme"})
 ```
 
 ### Processors
 
-Processors transform frames and are the building blocks of pipelines:
+Processors are the atomic units of transformation:
 
 ```python
-from knomly.pipeline.processor import Processor
+from knomly import Processor
 
-class MyProcessor(Processor):
+class ValidateProcessor(Processor):
     @property
     def name(self) -> str:
-        return "my_processor"
+        return "validate"
 
     async def process(self, frame: Frame, ctx: PipelineContext) -> Frame | None:
-        # Transform and return frame, or None to filter
-        return frame.derive(processed=True)
+        if not frame.data.get("required_field"):
+            return None  # Filter out invalid frames
+        return frame
 ```
 
-### Intent-Based Routing
+### Routing
 
-Route frames based on detected intent:
+Control flow with routing primitives:
 
 ```python
-from knomly.pipeline.routing import Switch
+from knomly.pipeline.routing import Conditional, Switch, FanOut, TypeRouter
 
-pipeline = (
-    PipelineBuilder()
-    .add(IntentClassifier())
-    .add(Switch(
-        key=get_intent,
-        cases={
-            "greeting": GreetingHandler(),
-            "question": QuestionHandler(),
-            "command": CommandHandler(),
-        },
-        default=UnknownHandler(),
-    ))
-    .build()
+# Conditional routing
+Conditional(
+    when=lambda f: f.data.get("priority") == "high",
+    then=UrgentHandler(),
+    else=NormalHandler(),
 )
+
+# Switch on value
+Switch(
+    key=lambda f: f.data.get("type"),
+    cases={
+        "create": CreateHandler(),
+        "update": UpdateHandler(),
+        "delete": DeleteHandler(),
+    },
+    default=UnknownHandler(),
+)
+
+# Parallel fan-out
+FanOut(
+    processors=[NotifySlack(), NotifyEmail(), NotifyWebhook()],
+    strategy="parallel",
+)
+
+# Route by frame type
+TypeRouter({
+    "audio": AudioPipeline(),
+    "text": TextPipeline(),
+    "image": ImagePipeline(),
+})
 ```
 
-### Transport Abstraction
+### Integrations
 
-Support any messaging platform with the Transport pattern:
+SaaS integrations follow a consistent pattern:
 
 ```python
-from knomly.pipeline.transports import TwilioTransport, register_transport
+from knomly.integrations.plane import PlaneClient, PlaneConfig
 
-# Register at startup
-transport = TwilioTransport(
-    account_sid="...",
-    auth_token="...",
-    from_number="whatsapp:+1234567890",
+# Initialize integration
+plane = PlaneClient(PlaneConfig(
+    api_key="...",
+    workspace="my-workspace",
+))
+
+# Use directly
+task = await plane.create_issue(
+    project="Mobile App",
+    title="Fix login bug",
+    priority="high",
 )
-register_transport(transport)
 
-# Use in webhook handler
-transport = get_transport("twilio")
-frame = await transport.normalize_request(request)
+# Or use as processor in pipeline
+pipeline = Pipeline([
+    ParseRequest(),
+    CreateTask(provider="plane"),  # Uses registered integration
+    Notify(provider="zulip"),
+])
 ```
 
 ## Architecture
 
 ```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                              API Layer                                      │
-│  Twilio Webhook → FastAPI Handler → Background Task                        │
-└─────────────────────────────────┬──────────────────────────────────────────┘
-                                  │
-┌─────────────────────────────────▼──────────────────────────────────────────┐
-│                           Pipeline Layer                                    │
-│  Audio → Transcription → Intent → Router → [Processors] → Confirmation    │
-└─────────────────────────────────┬──────────────────────────────────────────┘
-                                  │
-┌─────────────────────────────────▼──────────────────────────────────────────┐
-│                            Agent Layer                                      │
-│  AgentBridgeProcessor → AgentExecutor → Tool Calls → Response              │
-└─────────────────────────────────┬──────────────────────────────────────────┘
-                                  │
-┌─────────────────────────────────▼──────────────────────────────────────────┐
-│                           Provider Layer                                    │
-│  STT (Gemini/Whisper) │ LLM (OpenAI/Anthropic) │ Chat (Zulip/Slack)       │
-└────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              INPUT LAYER                                     │
+│  Webhooks │ Message Queues │ Scheduled Jobs │ API Calls │ File Watchers    │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │ Frames
+┌──────────────────────────────────▼──────────────────────────────────────────┐
+│                            PIPELINE LAYER                                    │
+│                                                                              │
+│   ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐  │
+│   │Processor│───▶│Processor│───▶│ Router  │───▶│Processor│───▶│Processor│  │
+│   └─────────┘    └─────────┘    └────┬────┘    └─────────┘    └─────────┘  │
+│                                      │                                       │
+│                         ┌────────────┼────────────┐                         │
+│                         ▼            ▼            ▼                         │
+│                    ┌────────┐  ┌────────┐  ┌────────┐                       │
+│                    │Pipeline│  │Pipeline│  │Pipeline│                       │
+│                    └────────┘  └────────┘  └────────┘                       │
+│                                                                              │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │ Frames
+┌──────────────────────────────────▼──────────────────────────────────────────┐
+│                          INTEGRATION LAYER                                   │
+│                                                                              │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐          │
+│  │  Plane   │ │  Zulip   │ │  Slack   │ │  OpenAI  │ │  Stripe  │  ...     │
+│  │(Projects)│ │ (Chat)   │ │ (Chat)   │ │  (LLM)   │ │(Payments)│          │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘          │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Providers
+## Integrations
 
-Knomly supports multiple providers for each service type:
+Knomly provides a growing library of SaaS integrations:
 
-### Speech-to-Text (STT)
-- Google Gemini (`knomly[stt-gemini]`)
-- OpenAI Whisper (`knomly[stt-whisper]`)
-- Deepgram (`knomly[stt-deepgram]`)
+### AI/ML Services
+| Provider | Type | Package |
+|----------|------|---------|
+| OpenAI | LLM, STT, TTS | `knomly[llm-openai]` |
+| Anthropic | LLM | `knomly[llm-anthropic]` |
+| Google Gemini | LLM, STT | `knomly[llm-gemini,stt-gemini]` |
+| Deepgram | STT | `knomly[stt-deepgram]` |
 
-### Large Language Models (LLM)
-- OpenAI (`knomly[llm-openai]`)
-- Anthropic Claude (`knomly[llm-anthropic]`)
-- Google Gemini (`knomly[llm-gemini]`)
+### Communication
+| Provider | Type | Package |
+|----------|------|---------|
+| Zulip | Team Chat | `knomly[chat-zulip]` |
+| Twilio | SMS, WhatsApp, Voice | `knomly[transport-twilio]` |
+| *(coming)* Slack | Team Chat | `knomly[chat-slack]` |
 
-### Chat
-- Zulip (`knomly[chat-zulip]`)
+### Project Management
+| Provider | Type | Package |
+|----------|------|---------|
+| Plane | Issues, Projects | built-in |
+| *(coming)* Linear | Issues, Projects | `knomly[pm-linear]` |
+| *(coming)* Jira | Issues, Projects | `knomly[pm-jira]` |
 
-### Transports
-- Twilio (WhatsApp, SMS) (`knomly[transport-twilio]`)
-- Telegram (`knomly[transport-telegram]`)
+### Adding Your Own Integration
+
+```python
+from knomly.integrations.base import IntegrationClient, IntegrationConfig
+
+class MyServiceConfig(IntegrationConfig):
+    api_key: str
+    base_url: str = "https://api.myservice.com"
+
+class MyServiceClient(IntegrationClient):
+    def __init__(self, config: MyServiceConfig):
+        super().__init__(config)
+
+    @property
+    def name(self) -> str:
+        return "myservice"
+
+    def _get_auth_headers(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {self.config.api_key}"}
+
+    async def do_something(self, data: dict) -> dict:
+        response = await self._request("POST", "/api/action", json=data)
+        return response.json()
+```
 
 ## Configuration
 
-Knomly uses environment variables for configuration:
+### Environment Variables
 
 ```bash
-# Provider API Keys
-KNOMLY_GEMINI_API_KEY=your-gemini-key
-KNOMLY_OPENAI_API_KEY=your-openai-key
-KNOMLY_ANTHROPIC_API_KEY=your-anthropic-key
+# Core
+KNOMLY_ENVIRONMENT=production
+KNOMLY_DEBUG=false
 
-# Zulip
+# AI Providers
+KNOMLY_OPENAI_API_KEY=sk-...
+KNOMLY_ANTHROPIC_API_KEY=sk-ant-...
+KNOMLY_GEMINI_API_KEY=...
+
+# Integrations
+KNOMLY_PLANE_API_KEY=...
 KNOMLY_ZULIP_SITE=https://chat.example.com
 KNOMLY_ZULIP_BOT_EMAIL=bot@example.com
-KNOMLY_ZULIP_API_KEY=your-zulip-key
+KNOMLY_ZULIP_API_KEY=...
 
-# Twilio
-KNOMLY_TWILIO_ACCOUNT_SID=your-account-sid
-KNOMLY_TWILIO_AUTH_TOKEN=your-auth-token
-KNOMLY_TWILIO_WHATSAPP_NUMBER=whatsapp:+1234567890
+# Transport
+KNOMLY_TWILIO_ACCOUNT_SID=...
+KNOMLY_TWILIO_AUTH_TOKEN=...
 
-# Database
+# Database (for config storage)
 KNOMLY_MONGODB_URL=mongodb://localhost:27017
-KNOMLY_MONGODB_DATABASE=knomly
 ```
 
-See [.env.example](.env.example) for a complete list.
+### Configuration-Driven Pipelines
 
-## Examples
+For multi-tenant SaaS applications, define pipelines in configuration:
 
-See the [examples](examples/) directory:
+```yaml
+# pipelines/customer-support.yaml
+name: customer-support
+processors:
+  - type: webhook_input
+    provider: twilio
+  - type: transcribe
+    provider: gemini
+  - type: classify_intent
+    provider: openai
+  - type: conditional
+    when: "intent == 'create_task'"
+    then:
+      - type: create_task
+        provider: plane
+        config:
+          project: "{{tenant.default_project}}"
+    else:
+      - type: respond
+        message: "I couldn't understand that request."
+  - type: notify
+    provider: zulip
+    config:
+      stream: "{{tenant.notification_stream}}"
+```
 
-- **01-simple-pipeline** - Basic pipeline with custom processors
-- **02-voice-standup** - Voice-to-chat standup pipeline
-- **03-intent-routing** - Intent classification and routing
-- **04-custom-transport** - Creating custom transport adapters
+```python
+from knomly.runtime import PipelineResolver
+
+resolver = PipelineResolver(loader=FileDefinitionLoader("pipelines/"))
+pipeline = await resolver.resolve_for_user(user_id="tenant-123")
+result = await pipeline.execute(initial_frame)
+```
+
+## Built-in Resilience
+
+### Retry with Backoff
+
+```python
+from knomly.pipeline.retry import with_retry, RetryPolicy, ExponentialBackoff
+
+@with_retry(RetryPolicy(
+    max_retries=3,
+    backoff=ExponentialBackoff(base=1.0, max_delay=30.0),
+    retryable_exceptions=[ConnectionError, TimeoutError],
+))
+async def unreliable_operation():
+    ...
+```
+
+### Circuit Breaker
+
+```python
+from knomly.pipeline.retry import CircuitBreaker
+
+breaker = CircuitBreaker(
+    failure_threshold=5,
+    recovery_timeout=30.0,
+)
+
+async with breaker:
+    await external_service_call()
+```
+
+### Rate Limiting
+
+```python
+from knomly.pipeline.ratelimit import RateLimiter, TokenBucket
+
+limiter = RateLimiter(TokenBucket(rate=10, capacity=100))
+
+async with limiter:
+    await api_call()
+```
+
+## Observability
+
+### Structured Logging
+
+```python
+from knomly.pipeline.observability import PipelineLogger
+
+logger = PipelineLogger(service="my-service")
+logger.info("Processing frame", frame_id=frame.id, frame_type=frame.frame_type)
+```
+
+### Metrics
+
+```python
+from knomly.pipeline.observability import get_metrics
+
+metrics = get_metrics()
+metrics.increment("frames_processed", tags={"type": frame.frame_type})
+metrics.histogram("processing_time", duration_ms, tags={"processor": processor.name})
+```
+
+### Distributed Tracing
+
+```python
+from knomly.pipeline.observability import get_tracer
+
+tracer = get_tracer()
+with tracer.span("process_frame") as span:
+    span.set_attribute("frame.type", frame.frame_type)
+    result = await processor.process(frame, ctx)
+```
 
 ## Development
 
 ```bash
-# Clone repository
+# Clone
 git clone https://github.com/kuzushi-labs/knomly.git
 cd knomly
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+# Install
+pip install -e ".[dev,docs]"
 
-# Install with dev dependencies
-pip install -e ".[dev]"
-
-# Run tests
+# Test
 pytest
 
-# Run tests with coverage
-pytest --cov=knomly --cov-report=html
+# Lint
+ruff check . && ruff format .
 
-# Run linting
-ruff check .
-ruff format .
-
-# Type checking
+# Type check
 mypy knomly
+
+# Docs
+mkdocs serve
 ```
 
 ## Project Structure
 
 ```
 knomly/
-├── knomly/                 # Main package
-│   ├── adapters/          # Tool adapters (OpenAPI, etc.)
-│   ├── agent/             # Agent layer (executor, processor)
-│   ├── app/               # FastAPI application
-│   ├── config/            # Configuration schemas
-│   ├── integrations/      # External integrations (Plane, etc.)
-│   ├── pipeline/          # Core pipeline framework
-│   │   ├── frames/        # Frame types
-│   │   ├── processors/    # Built-in processors
-│   │   └── transports/    # Transport adapters
-│   ├── providers/         # Service providers (STT, LLM, Chat)
-│   ├── runtime/           # Dynamic configuration
-│   ├── tools/             # Tool system
-│   └── utils/             # Utilities
-├── tests/                 # Test suite
-├── examples/              # Example applications
-├── docs/                  # Documentation
-└── configs/               # Runtime configuration files
+├── knomly/
+│   ├── pipeline/           # Core pipeline framework
+│   │   ├── frames/         # Frame types
+│   │   ├── processor.py    # Base processor
+│   │   ├── executor.py     # Pipeline execution
+│   │   ├── routing.py      # Routing primitives
+│   │   ├── retry.py        # Resilience patterns
+│   │   └── observability.py
+│   ├── integrations/       # SaaS integrations
+│   │   ├── base.py         # Integration base classes
+│   │   ├── plane/          # Plane.so integration
+│   │   └── ...
+│   ├── providers/          # AI service providers
+│   │   ├── llm/            # LLM providers
+│   │   ├── stt/            # Speech-to-text
+│   │   └── chat/           # Chat providers
+│   ├── agent/              # Agent layer (tool calling)
+│   ├── runtime/            # Dynamic configuration
+│   └── adapters/           # External adapters
+├── tests/
+├── examples/
+└── docs/
 ```
+
+## Comparison
+
+| Feature | Knomly | Pipecat | Langchain | Prefect |
+|---------|--------|---------|-----------|---------|
+| General-purpose pipelines | ✅ | ❌ (voice) | ❌ (LLM) | ✅ |
+| Real-time capable | ✅ | ✅ | ⚠️ | ❌ |
+| SaaS integrations | ✅ | ⚠️ (AI only) | ⚠️ (AI only) | ⚠️ |
+| Typed Python API | ✅ | ✅ | ⚠️ | ✅ |
+| Configuration-driven | ✅ | ❌ | ⚠️ | ✅ |
+| Agent/tool support | ✅ | ✅ | ✅ | ❌ |
+| Built-in resilience | ✅ | ⚠️ | ⚠️ | ✅ |
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+**Adding a new integration?** That's the best way to contribute. Every SaaS product is a potential integration.
+
+```bash
+# Create integration structure
+mkdir -p knomly/integrations/myservice
+touch knomly/integrations/myservice/{__init__,client,frames,processors,schemas}.py
+```
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT License. See [LICENSE](LICENSE).
 
 ## Acknowledgments
 
-Inspired by [Pipecat](https://github.com/pipecat-ai/pipecat) - the open-source framework for voice and multimodal AI.
+- [Pipecat](https://github.com/pipecat-ai/pipecat) — The elegant architecture we generalized
+- [FastAPI](https://fastapi.tiangolo.com/) — Inspiration for developer experience
+- [Pydantic](https://docs.pydantic.dev/) — The foundation for type safety
 
-## Support
+---
 
-- [GitHub Issues](https://github.com/kuzushi-labs/knomly/issues) - Bug reports and feature requests
-- [Discussions](https://github.com/kuzushi-labs/knomly/discussions) - Questions and community
+**Knomly** — *The missing pipeline framework for the SaaS age.*
