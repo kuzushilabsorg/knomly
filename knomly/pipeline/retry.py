@@ -386,9 +386,7 @@ async def with_retry(
                 )
                 await asyncio.sleep(delay)
             else:
-                logger.error(
-                    f"{operation_name}: Failed after {attempt} attempts, " f"last error: {e}"
-                )
+                logger.error(f"{operation_name}: Failed after {attempt} attempts, last error: {e}")
                 return RetryResult(
                     success=False,
                     result=None,
@@ -418,7 +416,7 @@ class CircuitOpenError(Exception):
         self.circuit_name = circuit_name
         self.reset_after = reset_after
         super().__init__(
-            f"Circuit '{circuit_name}' is open, " f"will attempt reset in {reset_after:.1f}s"
+            f"Circuit '{circuit_name}' is open, will attempt reset in {reset_after:.1f}s"
         )
 
 
@@ -489,8 +487,7 @@ class CircuitBreaker:
     def _transition_to_open(self) -> None:
         """Transition to open state."""
         logger.warning(
-            f"Circuit '{self.name}': {self._state.value} -> OPEN "
-            f"(failures={self._failure_count})"
+            f"Circuit '{self.name}': {self._state.value} -> OPEN (failures={self._failure_count})"
         )
         self._state = CircuitState.OPEN
         self._last_failure_time = time.monotonic()
@@ -679,7 +676,7 @@ class ResilientProcessor:
                 return self.fallback(frame, e)
             if not self.critical:
                 logger.warning(
-                    f"Non-critical processor {self.processor.name} failed, " f"continuing: {e}"
+                    f"Non-critical processor {self.processor.name} failed, continuing: {e}"
                 )
                 return frame
             raise

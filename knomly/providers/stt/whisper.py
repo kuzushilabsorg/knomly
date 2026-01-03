@@ -138,8 +138,7 @@ class WhisperSTTProvider(BaseSTTProvider):
                 self._client = AsyncOpenAI(api_key=self._api_key)
             except ImportError:
                 raise ImportError(
-                    "openai package is required for Whisper STT. "
-                    "Install with: pip install openai"
+                    "openai package is required for Whisper STT. Install with: pip install openai"
                 )
         return self._client
 
@@ -255,9 +254,7 @@ class WhisperSTTProvider(BaseSTTProvider):
                 words = None
                 duration_ms = None
 
-            logger.debug(
-                f"Whisper transcription: {len(text)} chars, " f"language={detected_language}"
-            )
+            logger.debug(f"Whisper transcription: {len(text)} chars, language={detected_language}")
 
             return TranscriptionResult(
                 original_text=text,

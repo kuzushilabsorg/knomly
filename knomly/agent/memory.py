@@ -406,7 +406,7 @@ class RedisMemory:
                 )
             except ImportError:
                 raise ImportError(
-                    "redis package required for RedisMemory. " "Install with: pip install redis"
+                    "redis package required for RedisMemory. Install with: pip install redis"
                 )
         return self._client
 

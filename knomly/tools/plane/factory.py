@@ -109,7 +109,7 @@ class PlaneToolFactory:
         api_key = context.secrets.get(PLANE_API_KEY)
         if not api_key:
             logger.warning(
-                f"[plane_factory] No API key for user {context.user_id}, " f"returning empty tools"
+                f"[plane_factory] No API key for user {context.user_id}, returning empty tools"
             )
             return ()
 

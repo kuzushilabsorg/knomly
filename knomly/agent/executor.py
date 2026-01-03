@@ -212,7 +212,7 @@ class AgentExecutor:
             if self._memory and effective_session_id:
                 await self._memory.persist_frame(effective_session_id, initial_context)
             logger.info(
-                f"[agent_executor] Starting with context frame: " f"{initial_context.frame_type}"
+                f"[agent_executor] Starting with context frame: {initial_context.frame_type}"
             )
 
         logger.info(
@@ -266,8 +266,7 @@ class AgentExecutor:
                 if isinstance(decision, AgentResponseFrame):
                     # Agent is done
                     logger.info(
-                        f"[agent_executor] Agent responded. "
-                        f"Goal achieved: {decision.goal_achieved}"
+                        f"[agent_executor] Agent responded. Goal achieved: {decision.goal_achieved}"
                     )
                     return success_result(
                         response=decision,
@@ -292,21 +291,18 @@ class AgentExecutor:
                     # Log result
                     if result_frame.success:
                         logger.info(
-                            f"[agent_executor] Tool succeeded: "
-                            f"{result_frame.result_text[:100]}..."
+                            f"[agent_executor] Tool succeeded: {result_frame.result_text[:100]}..."
                         )
                     else:
                         logger.warning(
-                            f"[agent_executor] Tool failed: " f"{result_frame.error_message}"
+                            f"[agent_executor] Tool failed: {result_frame.error_message}"
                         )
 
                     # Continue loop to let agent process result
 
                 elif isinstance(decision, PlanFrame):
                     # Agent is still thinking
-                    logger.debug(
-                        f"[agent_executor] Agent planning: " f"{decision.reasoning[:100]}..."
-                    )
+                    logger.debug(f"[agent_executor] Agent planning: {decision.reasoning[:100]}...")
 
                     # If agent keeps planning without action, it might be stuck
                     # The processor should handle this by eventually responding
@@ -314,7 +310,7 @@ class AgentExecutor:
                 else:
                     # Unknown frame type
                     logger.warning(
-                        f"[agent_executor] Unknown decision type: " f"{type(decision).__name__}"
+                        f"[agent_executor] Unknown decision type: {type(decision).__name__}"
                     )
 
                 # Emit control frame for observability

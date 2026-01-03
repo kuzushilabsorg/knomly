@@ -210,7 +210,7 @@ ignore = [
 known-first-party = ["knomly"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["ARG001", "ARG002", "ARG005", "S101", "F841", "E402", "B017", "PTH123", "RUF013", "RUF059"]
+"tests/*" = ["ARG001", "ARG002", "ARG005", "S101", "F841", "E402", "B017", "PTH123", "RUF013"]
 "examples/*" = ["T201", "ARG002", "F841"]  # allow print, unused args and vars in examples
 # Pydantic models need runtime imports, not TYPE_CHECKING
 "knomly/adapters/schemas/*" = ["TC001", "TC003"]

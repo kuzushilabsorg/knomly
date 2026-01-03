@@ -63,7 +63,7 @@ class OpenAILLMProvider(BaseLLMProvider):
                 )
             except ImportError:
                 raise ImportError(
-                    "openai package is required for OpenAI LLM. " "Install with: pip install openai"
+                    "openai package is required for OpenAI LLM. Install with: pip install openai"
                 )
         return self._client
 

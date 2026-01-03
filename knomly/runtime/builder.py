@@ -123,7 +123,7 @@ class RuntimeBuilder:
         builder = PipelineBuilder(context=context)
 
         logger.info(
-            f"[runtime_builder] Pipeline built | " f"providers={providers} | " f"tools={len(tools)}"
+            f"[runtime_builder] Pipeline built | providers={providers} | tools={len(tools)}"
         )
 
         return builder.build()

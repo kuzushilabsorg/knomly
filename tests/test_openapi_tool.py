@@ -666,7 +666,7 @@ class TestOpenAPIOperationTool:
             auth={"api_key": "test-token"},
         )
 
-        url, _params, _body, headers = tool._build_request({})
+        _url, _params, _body, headers = tool._build_request({})
 
         assert headers["Authorization"] == "Bearer test-token"
 
@@ -683,7 +683,7 @@ class TestOpenAPIOperationTool:
             auth={"x_api_key": "secret-key"},
         )
 
-        url, _params, _body, headers = tool._build_request({})
+        _url, _params, _body, headers = tool._build_request({})
 
         assert headers["X-API-Key"] == "secret-key"
 

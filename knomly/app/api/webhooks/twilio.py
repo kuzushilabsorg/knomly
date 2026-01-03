@@ -77,7 +77,7 @@ async def _validate_twilio_signature(request: Request, form_data: dict[str, Any]
     # Require auth token for validation
     if not TWILIO_AUTH_TOKEN:
         logger.warning(
-            "[SECURITY] KNOMLY_TWILIO_AUTH_TOKEN not set. " "Webhook signature validation disabled."
+            "[SECURITY] KNOMLY_TWILIO_AUTH_TOKEN not set. Webhook signature validation disabled."
         )
         return True
 
@@ -120,9 +120,7 @@ async def _validate_twilio_signature(request: Request, form_data: dict[str, Any]
         return True
 
     except ImportError:
-        logger.warning(
-            "[SECURITY] twilio package not installed. " "Install with: pip install twilio"
-        )
+        logger.warning("[SECURITY] twilio package not installed. Install with: pip install twilio")
         return True
     except HTTPException:
         raise

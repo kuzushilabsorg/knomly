@@ -120,7 +120,7 @@ class PlaneCreateTaskTool(Tool):
                 "assignee": {
                     "type": "string",
                     "description": (
-                        "User to assign the task to (name or email). " "Leave empty for unassigned."
+                        "User to assign the task to (name or email). Leave empty for unassigned."
                     ),
                     "default": "",
                 },
@@ -209,7 +209,7 @@ class PlaneCreateTaskTool(Tool):
             if not project_id:
                 available = list(self._cache.get_project_mapping().keys())[:5]
                 return ToolResult.error(
-                    f"Unknown project: '{project_name}'. " f"Available projects: {available}"
+                    f"Unknown project: '{project_name}'. Available projects: {available}"
                 )
 
             # Resolve assignee to ID (optional)

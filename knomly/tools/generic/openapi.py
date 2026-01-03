@@ -791,9 +791,7 @@ class OpenAPIToolkit:
         if operation_id not in self._tools:
             if operation_id not in self._operations:
                 available = list(self._operations.keys())[:5]
-                raise KeyError(
-                    f"Unknown operation: '{operation_id}'. " f"Available: {available}..."
-                )
+                raise KeyError(f"Unknown operation: '{operation_id}'. Available: {available}...")
 
             self._tools[operation_id] = OpenAPIOperationTool(
                 operation=self._operations[operation_id],

@@ -230,7 +230,7 @@ class AgentProcessor:
         user_message = self._build_user_message(goal, history, iteration)
 
         logger.info(
-            f"[agent_processor] Iteration {iteration}: " f"Deciding action for goal: {goal[:50]}..."
+            f"[agent_processor] Iteration {iteration}: Deciding action for goal: {goal[:50]}..."
         )
 
         # Call LLM
@@ -384,7 +384,7 @@ class AgentProcessor:
                     )
                 elif frame.frame_type == "tool_call":
                     lines.append(
-                        f"[Tool Call] {frame.tool_name}: " f"{json.dumps(frame.tool_arguments)}"
+                        f"[Tool Call] {frame.tool_name}: {json.dumps(frame.tool_arguments)}"
                     )
                 elif frame.frame_type == "extraction":
                     if hasattr(frame, "summary"):
@@ -467,8 +467,7 @@ class AgentProcessor:
                 # Validate tool exists
                 if not self._tools.get(tool_name):
                     logger.warning(
-                        f"[agent_processor] Unknown tool: {tool_name}. "
-                        f"Returning error response."
+                        f"[agent_processor] Unknown tool: {tool_name}. Returning error response."
                     )
                     return AgentResponseFrame(
                         response_text=f"I tried to use an unknown tool: {tool_name}",
@@ -524,8 +523,7 @@ class AgentProcessor:
             else:
                 # Unknown action or missing required fields - return planning frame
                 logger.warning(
-                    f"[agent_processor] Unknown/incomplete action: {action}. "
-                    f"Returning plan frame."
+                    f"[agent_processor] Unknown/incomplete action: {action}. Returning plan frame."
                 )
                 return PlanFrame(
                     goal=goal,

@@ -406,7 +406,7 @@ class OpenAPIToolAdapter(BaseToolAdapter):
 
         # 2. Cache miss - need to parse spec
         logger.info(
-            f"[openapi_adapter] Building tool: {definition.name} " f"(operation_id={operation_id})"
+            f"[openapi_adapter] Building tool: {definition.name} (operation_id={operation_id})"
         )
 
         # Get the OpenAPI spec (spec cache)
@@ -421,8 +421,7 @@ class OpenAPIToolAdapter(BaseToolAdapter):
 
         if not base_url:
             raise ValueError(
-                f"No base_url in source_config and none found in spec for "
-                f"tool '{definition.name}'"
+                f"No base_url in source_config and none found in spec for tool '{definition.name}'"
             )
 
         # Build auth from context secrets
@@ -448,7 +447,7 @@ class OpenAPIToolAdapter(BaseToolAdapter):
         except KeyError:
             available = toolkit.list_operations()[:5]
             raise ValueError(
-                f"Operation '{operation_id}' not found in spec. " f"Available: {available}..."
+                f"Operation '{operation_id}' not found in spec. Available: {available}..."
             )
 
         # Cache the parsed operation for future requests
@@ -509,8 +508,7 @@ class OpenAPIToolAdapter(BaseToolAdapter):
                 spec = yaml.safe_load(response.text)
             except ImportError:
                 raise ValueError(
-                    "YAML spec detected but PyYAML not installed. "
-                    "Install with: pip install pyyaml"
+                    "YAML spec detected but PyYAML not installed. Install with: pip install pyyaml"
                 )
 
         # Cache spec

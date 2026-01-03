@@ -83,8 +83,7 @@ class TransportRegistry:
         if adapter is None:
             available = ", ".join(self._adapters.keys()) or "(none)"
             raise TransportNotFoundError(
-                f"No transport adapter registered for channel: {channel_id}. "
-                f"Available: {available}"
+                f"No transport adapter registered for channel: {channel_id}. Available: {available}"
             )
         return adapter
 

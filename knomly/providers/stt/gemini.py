@@ -108,7 +108,7 @@ class GeminiSTTProvider(BaseSTTProvider):
             return buffer.getvalue(), "audio/mpeg"
         except ImportError:
             raise ImportError(
-                "pydub package is required for audio conversion. " "Install with: pip install pydub"
+                "pydub package is required for audio conversion. Install with: pip install pydub"
             )
         except Exception as e:
             logger.error(f"Audio conversion failed: {e}")

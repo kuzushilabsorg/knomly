@@ -76,7 +76,7 @@ class ToolRegistry:
         """
         if tool.name in self._tools:
             raise ToolRegistryError(
-                f"Tool '{tool.name}' already registered. " f"Use a unique name or unregister first."
+                f"Tool '{tool.name}' already registered. Use a unique name or unregister first."
             )
 
         # Validate tool has required properties

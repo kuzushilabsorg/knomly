@@ -69,9 +69,7 @@ class ZulipProcessor(Processor):
         # Format message
         content = frame.format_zulip_message()
 
-        logger.info(
-            f"Posting to {frame.zulip_stream} > {frame.zulip_topic} " f"({len(content)} chars)"
-        )
+        logger.info(f"Posting to {frame.zulip_stream} > {frame.zulip_topic} ({len(content)} chars)")
 
         result = await chat.send_message(
             stream=frame.zulip_stream,

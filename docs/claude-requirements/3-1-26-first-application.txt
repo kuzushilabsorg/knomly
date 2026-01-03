@@ -1,0 +1,59 @@
+Okay.
+So currently we have the stack as mentioned 
+- selfhosted postgres, mongodb, redis, qdrant, livekit, zulip, plane, docmmost, twenty-crm
+- we have the OSS framework for building a complete pipeline based setup for the dataflow as on github : "
+
+I want to do the following:
+
+- I want to setup a system where I can send a voice not in the morning with my tasks for the day on whatsapp to my whatsapp business acount which is running via twilio and is connected to a backend service which in turn in connected to n8n setup.
+
+so essentially, the first version of system which is setup is like:
+whatsapp -> twilio -> webhook into fastapi running support for whatsapp [transcription of audio message into structured format, determine n8n workflow to call, same if whatsapp message is text] -> webhooks into n8n -> workflows in n8n triggered -> connected to self hosted zulip, plane, wiki, twenty-crm
+
+- I want to provide the voice note the following details:
+1. my tasks for today
+2. clients to followup with and what to followup on
+
+- this audio needs to be transcribed and converted into a structured output (which we will build after discussion in a bit)
+
+- the audio will contain the tasks which should be put into relevant zulip channel (standup > arunank-updates). this would require some sort of connection into zulip via webhook etc
+
+- simialrly, the task would also need to be added/updated into plane -> with its project structure -> this will again need some sort of connection into plane
+
+- client followups - we will have a setup/rule engine and set of prompts for different clients - we will use it and the daily message to genertae response/queries/status updates and send them through different channels - Whatsapp and Email to start with
+
+<Task>
+1. You are tasked with ultrathink and doing an in depth feasibility check for the above mentioned setup. Do web search if needed. Check on every levels - technical + cost
+2. Once you deem it feasible, think carefully and create a roadmap as to how this can be implemented into different phases. We already have a lot of code and context ready and I will help you with everything. For now, assume all the individual pieces mentioned here are available and live in some form. They need to be connected and brought together. Make sure everything you do is extremely world class and modular - think - all prompts, information sitting in database and changeable as per requirement from another agent/ui instead of sitting in app layer and requiring fresh deployment. Keep abstractions strong and ensure everything is designed in a very generalisable way where - same template can be replicated across differnt users, context etc. think workflows/agents/implementation on inside - and outcomes on the outside for the end user.
+3. ultrathink from first principles. We are looking at this platform in two aspects - a) personal supercharged AI assistant for individuals + solopreneurs in their professional context b) Business Operations streamlining and performing it accordingly - think 1 person unicorn type setup eventually
+4. Write all the details and files accordingly in the folder: "/Users/paruljuniwal/kuzushi_labs/system-infra/knowmly"
+5. Let me know if you need more information, ask more pertinent questions on this
+</Task>
+
+
+Yes. I t was all completed. We were moving the code for anomly from inside 
+system-infra to into a separate project for OSS
+
+Okay. I wanted to do the following - let me know if this is feasible.
+
+Currently -knomly isinside the system-infra repo - git and project.
+
+Is it possible to create a fresh knomly project and git repo which i can open 
+source as well? 
+
+You had completed some of the todos till Create CONTRIBUTING.md guidelines:
+ Todos
+  ☒ Create new knomly directory structure
+  ☒ Copy source code (excluding git, cache, env)
+  ☒ Generalize internal references (kuzushilabs.xyz)
+  ☒ Create comprehensive .gitignore
+  ☒ Create MIT LICENSE file
+  ☒ Create comprehensive README.md
+  ☒ Create CONTRIBUTING.md guidelines
+  ☐ Create CODE_OF_CONDUCT.md
+  ☐ Create SECURITY.md policy
+  ☐ Create .github templates (issues, PRs)
+  ☐ Create env.example with documented variables
+  ☐ Create CHANGELOG.md
+  ☐ Initialize git and create initial commit
+  ☐ Verify tests pass in new location 

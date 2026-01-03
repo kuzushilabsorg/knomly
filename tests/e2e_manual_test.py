@@ -436,9 +436,9 @@ class TestE2EPipeline:
             (d for d in ctx.routing_decisions if "intent" in d.router_name.lower()), None
         )
         assert intent_decision is not None, "No intent routing decision"
-        assert (
-            intent_decision.selected_branch == "standup"
-        ), f"Wrong branch: {intent_decision.selected_branch}"
+        assert intent_decision.selected_branch == "standup", (
+            f"Wrong branch: {intent_decision.selected_branch}"
+        )
 
         print("\n✅ E2E Test PASSED")
 
@@ -527,9 +527,9 @@ class TestE2EPipeline:
             (d for d in ctx.routing_decisions if "intent" in d.router_name.lower()), None
         )
         assert intent_decision is not None
-        assert (
-            intent_decision.selected_branch == "default"
-        ), f"Should route to default, got: {intent_decision.selected_branch}"
+        assert intent_decision.selected_branch == "default", (
+            f"Should route to default, got: {intent_decision.selected_branch}"
+        )
 
         print("\n✅ Unknown Intent Test PASSED")
 

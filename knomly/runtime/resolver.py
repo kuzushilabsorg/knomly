@@ -382,9 +382,7 @@ class PipelineResolver:
         #    This is a minimal example - you'd customize for your workflow.
         builder = PipelineBuilder(context=context)
 
-        logger.info(
-            f"[resolver] Pipeline built | " f"providers={providers} | " f"tools={len(tools)}"
-        )
+        logger.info(f"[resolver] Pipeline built | providers={providers} | tools={len(tools)}")
 
         return builder.build()
 

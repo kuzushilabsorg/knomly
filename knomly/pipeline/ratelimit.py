@@ -235,13 +235,11 @@ class RateLimiter:
         if bucket.consume(cost):
             await self.storage.set(key, bucket)
             logger.debug(
-                f"Rate limit acquired: key={key}, cost={cost}, " f"remaining={bucket.tokens:.1f}"
+                f"Rate limit acquired: key={key}, cost={cost}, remaining={bucket.tokens:.1f}"
             )
             return True
         else:
-            logger.debug(
-                f"Rate limit exceeded: key={key}, cost={cost}, " f"tokens={bucket.tokens:.1f}"
-            )
+            logger.debug(f"Rate limit exceeded: key={key}, cost={cost}, tokens={bucket.tokens:.1f}")
             return False
 
     async def wait(self, key: str, cost: float = 1.0, timeout: float | None = None) -> bool:

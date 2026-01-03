@@ -82,7 +82,7 @@ class ConfigurationService:
             logger.info(f"Connected to MongoDB database: {self._database_name}")
         except ImportError:
             raise ImportError(
-                "motor package is required for MongoDB. " "Install with: pip install motor"
+                "motor package is required for MongoDB. Install with: pip install motor"
             )
 
     async def close(self) -> None:

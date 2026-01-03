@@ -122,7 +122,7 @@ class PlaneQueryTasksTool(Tool):
                 "assignee": {
                     "type": "string",
                     "description": (
-                        "Filter by assignee name or email (optional). " "Leave empty to show all."
+                        "Filter by assignee name or email (optional). Leave empty to show all."
                     ),
                     "default": "",
                 },
@@ -198,7 +198,7 @@ class PlaneQueryTasksTool(Tool):
             if not project_id:
                 available = list(self._cache.get_project_mapping().keys())[:5]
                 return ToolResult.error(
-                    f"Unknown project: '{project_name}'. " f"Available projects: {available}"
+                    f"Unknown project: '{project_name}'. Available projects: {available}"
                 )
 
             # Resolve assignee to ID (optional)
@@ -207,7 +207,7 @@ class PlaneQueryTasksTool(Tool):
                 assignee_id = self._cache.resolve_user(assignee)
                 if not assignee_id:
                     logger.warning(
-                        f"[plane_query_tasks] Unknown assignee: {assignee}. " f"Ignoring filter."
+                        f"[plane_query_tasks] Unknown assignee: {assignee}. Ignoring filter."
                     )
 
             # Query tasks
