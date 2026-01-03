@@ -636,38 +636,6 @@ knomly/
 └── providers/                # UNCHANGED - v1 preserved
 ```
 
-## Implementation Phases
-
-### Phase 2.0: Tool Foundation (Week 1)
-- [x] Design Tool interface (this ADR)
-- [ ] Implement `tools/base.py`
-- [ ] Implement `tools/registry.py`
-- [ ] Implement `PlaneCreateTaskTool`
-- [ ] Write unit tests for Tool execution
-
-### Phase 2.1: Agent Frames (Week 1)
-- [ ] Implement `agent/frames.py`
-- [ ] Add frame derivation methods
-- [ ] Write ADR-004 compliance tests
-
-### Phase 2.2: Agent Processor (Week 2)
-- [ ] Implement `AgentProcessor`
-- [ ] Implement LLM prompt building
-- [ ] Implement decision parsing
-- [ ] Write unit tests with mocked LLM
-
-### Phase 2.3: Agent Executor (Week 2)
-- [ ] Implement `AgentExecutor`
-- [ ] Implement bounded iteration
-- [ ] Implement timeout protection
-- [ ] Write integration tests
-
-### Phase 2.4: Integration (Week 3)
-- [ ] Connect agent to v1 pipeline output
-- [ ] Implement PlaneQueryTasksTool
-- [ ] End-to-end testing
-- [ ] Documentation
-
 ## Testing Strategy
 
 ### ADR-004 Compliance Test

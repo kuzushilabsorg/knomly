@@ -6,7 +6,7 @@
 
 ## Context
 
-We need a modular, extensible pipeline architecture for processing WhatsApp voice notes into structured Zulip standups. Pipecat provides an excellent reference architecture for AI pipelines, but it's designed for **real-time streaming** (WebRTC/WebSocket), while our use case is **HTTP request/response**.
+We need a modular, extensible pipeline architecture for processing discrete HTTP requests (webhooks, API calls, file uploads). Pipecat provides an excellent reference architecture for AI pipelines, but it's designed for **real-time streaming** (WebRTC/WebSocket), while many use cases are **HTTP request/response**.
 
 ### Pipecat's Design Context
 - Continuous audio/video streams
@@ -16,10 +16,10 @@ We need a modular, extensible pipeline architecture for processing WhatsApp voic
 - Priority queues (SystemFrames bypass normal queue)
 - Push-based model with concurrent frame processing
 
-### Our Design Context (WhatsApp → Zulip)
-- Discrete requests (complete voice note arrives as single file)
+### HTTP Pipeline Design Context
+- Discrete requests (complete input arrives as single payload)
 - Seconds-level latency acceptable
-- No mid-stream interruptions (recording is complete)
+- No mid-stream interruptions (input is complete)
 - Single request = single pipeline execution
 - No concurrency within single request
 - Request/response is inherently synchronous per-request
@@ -46,7 +46,7 @@ We adapt Pipecat's **valuable abstractions** while **removing complexity** that 
 | `push_frame()` with direction | **Return value** | Simpler, explicit |
 | Priority queue with SystemFrames | **Sequential execution** | Single request, no priority needed |
 | PipelineTask with async queues | **Simple async/await chain** | No concurrent frames |
-| Transport layer abstraction | **HTTP IS the transport** | FastAPI handles this |
+| Transport layer abstraction | **HTTP IS the transport** | Web framework handles this |
 | "Never consume frames" rule | **Processors can return None** | Sometimes we want to stop |
 
 ### Core Design Principles
@@ -64,14 +64,14 @@ We adapt Pipecat's **valuable abstractions** while **removing complexity** that 
 ```
 Frame (frozen dataclass)
 ├── InputFrame
-│   ├── AudioInputFrame      # Voice note from WhatsApp
-│   └── TextInputFrame       # Text message fallback
+│   ├── AudioInputFrame      # Audio file or stream
+│   └── TextInputFrame       # Text message or document
 ├── ProcessingFrame
 │   ├── TranscriptionFrame   # STT result
 │   └── ExtractionFrame      # LLM extraction result
 ├── ActionFrame
-│   ├── ZulipMessageFrame    # Zulip post result
-│   └── ConfirmationFrame    # WhatsApp confirmation result
+│   ├── NotificationFrame    # Chat/notification result
+│   └── TaskResultFrame      # Task creation result
 └── ErrorFrame               # Pipeline errors
 ```
 
@@ -109,13 +109,13 @@ class Processor(ABC):
                                           │
                                           ▼
 ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│ AudioInput   │───▶│ Transcribe   │───▶│ Extract      │───▶│ Post Zulip   │
+│ AudioInput   │───▶│ Transcribe   │───▶│ Extract      │───▶│ Notify       │
 │ Frame        │    │ Processor    │    │ Processor    │    │ Processor    │
 └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
                            │                   │                   │
                            ▼                   ▼                   ▼
                     ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-                    │ Transcription│    │ Extraction   │    │ ZulipMessage │
+                    │ Transcription│    │ Extraction   │    │ Notification │
                     │ Frame        │    │ Frame        │    │ Frame        │
                     └──────────────┘    └──────────────┘    └──────────────┘
                                                                    │
@@ -152,15 +152,15 @@ except Exception as e:
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        FastAPI Endpoint                              │
-│  POST /api/v1/webhook/twilio                                        │
+│  POST /api/v1/webhook                                               │
 └─────────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│  1. Parse Twilio form data                                          │
-│  2. Validate message type (audio)                                   │
-│  3. Return HTTP 200 immediately (Twilio requires fast ACK)          │
-│  4. Add BackgroundTask for pipeline execution                       │
+│  1. Parse incoming request data                                      │
+│  2. Validate input type                                              │
+│  3. Return HTTP 200 immediately (webhooks require fast ACK)          │
+│  4. Add BackgroundTask for pipeline execution                        │
 └─────────────────────────────────────────────────────────────────────┘
                                 │
                    ┌────────────┴────────────┐
@@ -169,10 +169,10 @@ except Exception as e:
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│  1. Create AudioInputFrame with Twilio media URL                    │
-│  2. Create PipelineContext with providers, config                   │
-│  3. Execute pipeline                                                │
-│  4. Log audit record to MongoDB                                     │
+│  1. Create InputFrame from request data                              │
+│  2. Create PipelineContext with providers, config                    │
+│  3. Execute pipeline                                                 │
+│  4. Log audit record                                                 │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
