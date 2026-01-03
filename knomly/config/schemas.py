@@ -7,17 +7,17 @@ Security:
     Sensitive fields use SecretStr to prevent accidental logging
     of credentials. Access the value with `.get_secret_value()`.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field, SecretStr
 
 
 def _utc_now() -> datetime:
     """Get current UTC time with timezone awareness."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class PromptConfig(BaseModel):
@@ -29,8 +29,8 @@ class PromptConfig(BaseModel):
 
     name: str = Field(..., description="Unique prompt identifier")
     system_prompt: str = Field(..., description="System prompt content")
-    user_template: Optional[str] = Field(None, description="User message template with {placeholders}")
-    model: Optional[str] = Field(None, description="Override model for this prompt")
+    user_template: str | None = Field(None, description="User message template with {placeholders}")
+    model: str | None = Field(None, description="Override model for this prompt")
     temperature: float = Field(0.7, ge=0, le=2)
     max_tokens: int = Field(1024, ge=1)
     description: str = Field("", description="Human-readable description")
@@ -54,12 +54,12 @@ class UserConfig(BaseModel):
     phone: str = Field(..., description="Phone number (E.164 format)")
     user_id: str = Field(..., description="Unique user identifier")
     user_name: str = Field(..., description="Display name")
-    email: Optional[str] = Field(None, description="Email address")
+    email: str | None = Field(None, description="Email address")
 
     # Zulip settings
     zulip_stream: str = Field("standup", description="Default Zulip stream")
     zulip_topic: str = Field(..., description="Zulip topic for this user")
-    zulip_email: Optional[str] = Field(None, description="Zulip user email")
+    zulip_email: str | None = Field(None, description="Zulip user email")
 
     # Preferences
     language_preference: str = Field("en", description="Preferred language code")
@@ -82,24 +82,24 @@ class PipelineAuditLog(BaseModel):
 
     execution_id: str = Field(..., description="Unique execution identifier")
     started_at: datetime = Field(default_factory=_utc_now)
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
     duration_ms: float = Field(0.0)
 
     # Request context
-    sender_phone: Optional[str] = None
+    sender_phone: str | None = None
     message_type: str = "audio"
-    user_id: Optional[str] = None
-    user_name: Optional[str] = None
+    user_id: str | None = None
+    user_name: str | None = None
 
     # Execution results
     success: bool = False
-    error: Optional[str] = None
-    processor_timings: Dict[str, float] = Field(default_factory=dict)
+    error: str | None = None
+    processor_timings: dict[str, float] = Field(default_factory=dict)
     frame_count: int = 0
 
     # Output summary
-    output_frame_types: List[str] = Field(default_factory=list)
-    zulip_message_id: Optional[int] = None
+    output_frame_types: list[str] = Field(default_factory=list)
+    zulip_message_id: int | None = None
     confirmation_sent: bool = False
 
     class Config:
@@ -128,8 +128,8 @@ class AppSettings(BaseModel):
 
     # Provider API keys (SecretStr prevents accidental logging)
     gemini_api_key: SecretStr = Field(default=SecretStr(""), description="Google Gemini API key")
-    openai_api_key: Optional[SecretStr] = None
-    anthropic_api_key: Optional[SecretStr] = None
+    openai_api_key: SecretStr | None = None
+    anthropic_api_key: SecretStr | None = None
 
     # Zulip
     zulip_site: str = Field(default="", description="Zulip server URL")

@@ -4,11 +4,12 @@ Pipeline Orchestrator for Knomly.
 The Pipeline executes a sequence of processors on input frames,
 managing flow control, error handling, and result collection.
 """
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 from .context import PipelineContext, PipelineResult
 from .frames import EndFrame, ErrorFrame, Frame, StartFrame
@@ -55,7 +56,7 @@ class Pipeline:
         )
     """
 
-    def __init__(self, processors: List["Processor"]):
+    def __init__(self, processors: list[Processor]):
         """
         Initialize pipeline with ordered list of processors.
 
@@ -64,10 +65,10 @@ class Pipeline:
         """
         self.processors = processors
         self._initialized = False
-        self._initialized_processors: List["Processor"] = []
+        self._initialized_processors: list[Processor] = []
 
     @property
-    def processor_names(self) -> List[str]:
+    def processor_names(self) -> list[str]:
         """Get names of all processors in order."""
         return [p.name for p in self.processors]
 
@@ -84,9 +85,7 @@ class Pipeline:
                 await processor.initialize(context)
                 self._initialized_processors.append(processor)
             except Exception as e:
-                logger.error(
-                    f"Failed to initialize processor '{processor.name}': {e}"
-                )
+                logger.error(f"Failed to initialize processor '{processor.name}': {e}")
                 # Re-raise after logging - cleanup will handle partial init
                 raise
         self._initialized = True
@@ -113,7 +112,7 @@ class Pipeline:
         self,
         frame: Frame,
         context: PipelineContext,
-    ) -> List[Frame]:
+    ) -> list[Frame]:
         """
         Process a single frame through all processors.
 
@@ -155,7 +154,7 @@ class Pipeline:
     async def execute(
         self,
         initial_frame: Frame,
-        context: Optional[PipelineContext] = None,
+        context: PipelineContext | None = None,
     ) -> PipelineResult:
         """
         Execute the pipeline on an initial frame.
@@ -187,9 +186,7 @@ class Pipeline:
             context.record_frame(start_frame.to_dict(), "pipeline")
 
             # Process the initial frame through all processors
-            output_frames = await self._process_frame_through_pipeline(
-                initial_frame, context
-            )
+            output_frames = await self._process_frame_through_pipeline(initial_frame, context)
 
             # Collect results
             result.output_frames = output_frames
@@ -259,9 +256,9 @@ class PipelineBuilder:
     """
 
     def __init__(self):
-        self._processors: List["Processor"] = []
+        self._processors: list[Processor] = []
 
-    def add(self, processor: "Processor") -> "PipelineBuilder":
+    def add(self, processor: Processor) -> PipelineBuilder:
         """Add a processor to the pipeline."""
         self._processors.append(processor)
         return self
@@ -269,8 +266,8 @@ class PipelineBuilder:
     def add_if(
         self,
         condition: bool,
-        processor: "Processor",
-    ) -> "PipelineBuilder":
+        processor: Processor,
+    ) -> PipelineBuilder:
         """Conditionally add a processor."""
         if condition:
             self._processors.append(processor)

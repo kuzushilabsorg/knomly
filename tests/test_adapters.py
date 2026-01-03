@@ -10,32 +10,26 @@ Tests cover:
 """
 
 import pytest
-from datetime import datetime, UTC
 
-from knomly.adapters.schemas import (
-    ToolDefinition,
-    ToolParameter,
-    ProviderDefinition,
-    PipelinePacket,
-    SessionContext,
-    AgentContext,
-    PipelineProviderConfig,
-)
 from knomly.adapters.base import (
+    BaseToolAdapter,
     DictServiceRegistry,
     ToolBuilder,
-    BaseToolAdapter,
+)
+from knomly.adapters.openapi_adapter import (
+    OpenAPISpecImporter,
+    OpenAPIToolAdapter,
+    SpecCache,
+)
+from knomly.adapters.schemas import (
+    PipelinePacket,
+    ProviderDefinition,
+    ToolDefinition,
+    ToolParameter,
 )
 from knomly.adapters.service_factory import (
     GenericServiceFactory,
-    ServiceClassMapping,
 )
-from knomly.adapters.openapi_adapter import (
-    OpenAPIToolAdapter,
-    OpenAPISpecImporter,
-    SpecCache,
-)
-
 
 # =============================================================================
 # Test ToolDefinition Schema
@@ -382,14 +376,16 @@ class TestDictServiceRegistry:
         class MockSTT:
             pass
 
-        registry = DictServiceRegistry({
-            "stt": {
-                "deepgram": {
-                    "class": MockSTT,
-                    "auth": {"arg": "api_key"},
+        registry = DictServiceRegistry(
+            {
+                "stt": {
+                    "deepgram": {
+                        "class": MockSTT,
+                        "auth": {"arg": "api_key"},
+                    },
                 },
-            },
-        })
+            }
+        )
 
         config = registry.get_config("stt", "deepgram")
         assert config is not None
@@ -400,15 +396,17 @@ class TestDictServiceRegistry:
 
     def test_list_providers(self):
         """Test listing providers."""
-        registry = DictServiceRegistry({
-            "stt": {
-                "deepgram": {},
-                "whisper": {},
-            },
-            "llm": {
-                "openai": {},
-            },
-        })
+        registry = DictServiceRegistry(
+            {
+                "stt": {
+                    "deepgram": {},
+                    "whisper": {},
+                },
+                "llm": {
+                    "openai": {},
+                },
+            }
+        )
 
         stt_providers = registry.list_providers("stt")
         assert "deepgram" in stt_providers
@@ -443,15 +441,17 @@ class TestGenericServiceFactory:
                 self.model = model
                 self.language = language
 
-        registry = DictServiceRegistry({
-            "stt": {
-                "mock": {
-                    "class": MockSTT,
-                    "auth": {"arg": "api_key"},
-                    "direct_args": ["model", "language"],
+        registry = DictServiceRegistry(
+            {
+                "stt": {
+                    "mock": {
+                        "class": MockSTT,
+                        "auth": {"arg": "api_key"},
+                        "direct_args": ["model", "language"],
+                    },
                 },
-            },
-        })
+            }
+        )
 
         factory = GenericServiceFactory(registry)
 
@@ -485,16 +485,18 @@ class TestGenericServiceFactory:
                 self.api_key = api_key
                 self.params = params
 
-        registry = DictServiceRegistry({
-            "llm": {
-                "mock": {
-                    "class": MockLLM,
-                    "auth": {"arg": "api_key"},
-                    "params_class": MockParams,
-                    "params_arg": "params",
+        registry = DictServiceRegistry(
+            {
+                "llm": {
+                    "mock": {
+                        "class": MockLLM,
+                        "auth": {"arg": "api_key"},
+                        "params_class": MockParams,
+                        "params_arg": "params",
+                    },
                 },
-            },
-        })
+            }
+        )
 
         factory = GenericServiceFactory(registry)
 
@@ -530,10 +532,12 @@ class TestGenericServiceFactory:
 
     def test_list_providers(self):
         """Test listing supported providers."""
-        registry = DictServiceRegistry({
-            "stt": {"a": {}, "b": {}},
-            "llm": {"x": {}},
-        })
+        registry = DictServiceRegistry(
+            {
+                "stt": {"a": {}, "b": {}},
+                "llm": {"x": {}},
+            }
+        )
         factory = GenericServiceFactory(registry)
 
         assert factory.list_providers("stt") == ["a", "b"]
@@ -541,9 +545,11 @@ class TestGenericServiceFactory:
 
     def test_supports_provider(self):
         """Test checking provider support."""
-        registry = DictServiceRegistry({
-            "stt": {"deepgram": {}},
-        })
+        registry = DictServiceRegistry(
+            {
+                "stt": {"deepgram": {}},
+            }
+        )
         factory = GenericServiceFactory(registry)
 
         assert factory.supports_provider("stt", "deepgram") is True
@@ -561,7 +567,6 @@ class TestToolBuilder:
     @pytest.fixture
     def mock_adapter(self):
         """Create a mock adapter that handles 'native' source."""
-        from knomly.tools.factory import ToolContext
 
         class MockTool:
             def __init__(self, name):
@@ -604,9 +609,7 @@ class TestToolBuilder:
 
         definitions = [
             ToolDefinition(name="enabled", description="Enabled", source="native"),
-            ToolDefinition(
-                name="disabled", description="Disabled", source="native", enabled=False
-            ),
+            ToolDefinition(name="disabled", description="Disabled", source="native", enabled=False),
         ]
 
         context = ToolContext(user_id="user-1")
@@ -624,9 +627,7 @@ class TestToolBuilder:
 
         definitions = [
             ToolDefinition(name="supported", description="Supported", source="native"),
-            ToolDefinition(
-                name="unsupported", description="Unsupported", source="openapi"
-            ),
+            ToolDefinition(name="unsupported", description="Unsupported", source="openapi"),
         ]
 
         context = ToolContext(user_id="user-1")
@@ -945,6 +946,7 @@ class TestOpenAPIToolAdapter:
         )
 
         from knomly.tools.factory import ToolContext
+
         context = ToolContext(user_id="u")
 
         # Should use cache (no network call)

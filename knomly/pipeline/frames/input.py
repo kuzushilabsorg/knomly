@@ -4,9 +4,10 @@ Input frames for Knomly pipeline.
 These frames represent the initial data entering the pipeline,
 typically from external sources like WhatsApp/Twilio webhooks.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from .base import Frame
@@ -56,15 +57,19 @@ class AudioInputFrame(Frame):
 
     def to_dict(self) -> dict[str, Any]:
         base = Frame.to_dict(self)
-        base.update({
-            "media_url": self.media_url[:50] + "..." if self.media_url and len(self.media_url) > 50 else self.media_url,
-            "has_audio": self.has_audio,
-            "audio_size": len(self.audio_data) if self.audio_data else 0,
-            "mime_type": self.mime_type,
-            "sender_phone": self.sender_phone,
-            "profile_name": self.profile_name,
-            "channel_id": self.channel_id,
-        })
+        base.update(
+            {
+                "media_url": self.media_url[:50] + "..."
+                if self.media_url and len(self.media_url) > 50
+                else self.media_url,
+                "has_audio": self.has_audio,
+                "audio_size": len(self.audio_data) if self.audio_data else 0,
+                "mime_type": self.mime_type,
+                "sender_phone": self.sender_phone,
+                "profile_name": self.profile_name,
+                "channel_id": self.channel_id,
+            }
+        )
         return base
 
 
@@ -89,9 +94,11 @@ class TextInputFrame(Frame):
 
     def to_dict(self) -> dict[str, Any]:
         base = Frame.to_dict(self)
-        base.update({
-            "text": self.text[:100] + "..." if len(self.text) > 100 else self.text,
-            "text_length": len(self.text),
-            "sender_phone": self.sender_phone,
-        })
+        base.update(
+            {
+                "text": self.text[:100] + "..." if len(self.text) > 100 else self.text,
+                "text_length": len(self.text),
+                "sender_phone": self.sender_phone,
+            }
+        )
         return base

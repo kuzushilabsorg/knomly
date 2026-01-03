@@ -50,12 +50,11 @@ import logging
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
-    from knomly.adapters.schemas import PipelinePacket, ToolDefinition
     from knomly.adapters.base import DefinitionLoader, ToolBuilder
+    from knomly.adapters.schemas import PipelinePacket, ToolDefinition
     from knomly.adapters.service_factory import GenericServiceFactory
     from knomly.pipeline import Pipeline
     from knomly.tools.base import Tool
-    from knomly.tools.factory import ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -63,11 +62,11 @@ logger = logging.getLogger(__name__)
 class PipelineCache(Protocol):
     """Protocol for pipeline packet caching."""
 
-    async def get(self, key: str) -> "PipelinePacket | None":
+    async def get(self, key: str) -> PipelinePacket | None:
         """Get cached packet by key."""
         ...
 
-    async def set(self, key: str, packet: "PipelinePacket", ttl_seconds: int = 3600) -> None:
+    async def set(self, key: str, packet: PipelinePacket, ttl_seconds: int = 3600) -> None:
         """Store packet in cache."""
         ...
 
@@ -87,24 +86,26 @@ class InMemoryPipelineCache:
     def __init__(self, maxsize: int = 1000, default_ttl: int = 3600):
         self._maxsize = maxsize
         self._default_ttl = default_ttl
-        self._cache: dict[str, tuple["PipelinePacket", float]] = {}  # (value, expiry_time)
+        self._cache: dict[str, tuple[PipelinePacket, float]] = {}  # (value, expiry_time)
         self._ttl_cache = None
 
         # Try to use cachetools for proper LRU+TTL
         try:
             from cachetools import TTLCache
+
             self._ttl_cache = TTLCache(maxsize=maxsize, ttl=default_ttl)
             logger.debug(f"[cache] Using TTLCache (maxsize={maxsize}, ttl={default_ttl}s)")
         except ImportError:
             logger.debug("[cache] cachetools not available, using fallback cache")
 
-    async def get(self, key: str) -> "PipelinePacket | None":
+    async def get(self, key: str) -> PipelinePacket | None:
         """Get cached packet, respecting TTL."""
         if self._ttl_cache is not None:
             return self._ttl_cache.get(key)
 
         # Fallback: check manual expiry
         import time
+
         entry = self._cache.get(key)
         if entry is None:
             return None
@@ -116,7 +117,7 @@ class InMemoryPipelineCache:
             return None
         return packet
 
-    async def set(self, key: str, packet: "PipelinePacket", ttl_seconds: int = 0) -> None:
+    async def set(self, key: str, packet: PipelinePacket, ttl_seconds: int = 0) -> None:
         """Store packet with TTL."""
         ttl = ttl_seconds if ttl_seconds > 0 else self._default_ttl
 
@@ -127,6 +128,7 @@ class InMemoryPipelineCache:
 
         # Fallback: store with expiry timestamp
         import time
+
         expiry = time.time() + ttl
 
         # Evict oldest if at capacity
@@ -187,11 +189,11 @@ class PipelineResolver:
     def __init__(
         self,
         *,
-        loader: "DefinitionLoader",
-        service_factory: "GenericServiceFactory | None" = None,
-        tool_builder: "ToolBuilder | None" = None,
+        loader: DefinitionLoader,
+        service_factory: GenericServiceFactory | None = None,
+        tool_builder: ToolBuilder | None = None,
         cache: PipelineCache | None = None,
-        default_packet: "PipelinePacket | None" = None,
+        default_packet: PipelinePacket | None = None,
     ):
         """
         Initialize resolver.
@@ -217,7 +219,7 @@ class PipelineResolver:
         session_id: str | None = None,
         use_cache: bool = True,
         **context: Any,
-    ) -> "PipelinePacket":
+    ) -> PipelinePacket:
         """
         Resolve pipeline configuration for a user.
 
@@ -277,7 +279,7 @@ class PipelineResolver:
     async def resolve_tools_for_user(
         self,
         user_id: str,
-    ) -> list["ToolDefinition"]:
+    ) -> list[ToolDefinition]:
         """
         Resolve just tool definitions for a user.
 
@@ -293,11 +295,11 @@ class PipelineResolver:
 
     async def build_pipeline(
         self,
-        packet: "PipelinePacket",
+        packet: PipelinePacket,
         secrets: dict[str, str],
         *,
-        extra_tools: list["Tool"] | None = None,
-    ) -> "Pipeline":
+        extra_tools: list[Tool] | None = None,
+    ) -> Pipeline:
         """
         Build a live Pipeline from a resolved packet.
 
@@ -344,7 +346,7 @@ class PipelineResolver:
                 providers.register_chat(packet.providers.chat.provider_code, chat)
 
         # 2. Build tools
-        tools: list["Tool"] = []
+        tools: list[Tool] = []
 
         if self._tool_builder and packet.tools:
             tool_context = ToolContext(
@@ -381,18 +383,16 @@ class PipelineResolver:
         builder = PipelineBuilder(context=context)
 
         logger.info(
-            f"[resolver] Pipeline built | "
-            f"providers={providers} | "
-            f"tools={len(tools)}"
+            f"[resolver] Pipeline built | " f"providers={providers} | " f"tools={len(tools)}"
         )
 
         return builder.build()
 
     async def build_tools_only(
         self,
-        packet: "PipelinePacket",
+        packet: PipelinePacket,
         secrets: dict[str, str],
-    ) -> list["Tool"]:
+    ) -> list[Tool]:
         """
         Build just the tools from a packet.
 
@@ -432,7 +432,7 @@ class PipelineResolver:
             return f"pipeline:{user_id}:{session_id}"
         return f"pipeline:{user_id}:default"
 
-    def _count_providers(self, packet: "PipelinePacket") -> int:
+    def _count_providers(self, packet: PipelinePacket) -> int:
         """Count configured providers in packet."""
         count = 0
         if packet.providers.stt:
@@ -453,7 +453,7 @@ class PipelineResolver:
 
 def create_resolver(
     *,
-    loader: "DefinitionLoader | None" = None,
+    loader: DefinitionLoader | None = None,
     config_dir: str | None = None,
     cache: PipelineCache | None = None,
 ) -> PipelineResolver:
@@ -468,17 +468,15 @@ def create_resolver(
     Returns:
         Configured PipelineResolver
     """
-    from knomly.adapters.service_factory import create_knomly_service_factory
-    from knomly.adapters.openapi_adapter import OpenAPIToolAdapter
     from knomly.adapters.base import ToolBuilder
+    from knomly.adapters.openapi_adapter import OpenAPIToolAdapter
+    from knomly.adapters.service_factory import create_knomly_service_factory
+
     from .loaders import FileDefinitionLoader, MemoryDefinitionLoader
 
     # Default loader
     if loader is None:
-        if config_dir:
-            loader = FileDefinitionLoader(config_dir)
-        else:
-            loader = MemoryDefinitionLoader()
+        loader = FileDefinitionLoader(config_dir) if config_dir else MemoryDefinitionLoader()
 
     # Setup tool builder
     tool_builder = ToolBuilder(

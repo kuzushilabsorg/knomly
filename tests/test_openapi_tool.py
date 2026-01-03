@@ -13,19 +13,18 @@ The "Universal Adapter" pattern eliminates manual tool writing by
 generating tools from OpenAPI specifications.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
+
 import httpx
+import pytest
 
 from knomly.tools.generic.openapi import (
     OpenAPIOperation,
     OpenAPIOperationTool,
     OpenAPIToolkit,
-    _RefResolver,
     _generate_operation_id,
+    _RefResolver,
 )
-from knomly.tools.base import ToolResult
-
 
 # =============================================================================
 # Test Fixtures: Sample OpenAPI Specs
@@ -309,9 +308,7 @@ def spec_with_refs():
         "servers": [{"url": "https://api.example.com"}],
         "paths": {
             "/users": {
-                "parameters": [
-                    {"$ref": "#/components/parameters/PageSize"}
-                ],
+                "parameters": [{"$ref": "#/components/parameters/PageSize"}],
                 "get": {
                     "operationId": "listUsers",
                     "summary": "List users",
@@ -550,9 +547,7 @@ class TestOpenAPIOperationTool:
         mock_client = AsyncMock()
         mock_client.request = AsyncMock(return_value=mock_response)
 
-        tool = OpenAPIOperationTool(
-            op, "https://api.example.com", http_client=mock_client
-        )
+        tool = OpenAPIOperationTool(op, "https://api.example.com", http_client=mock_client)
         result = await tool.execute({})
 
         assert result.is_error is False
@@ -566,9 +561,7 @@ class TestOpenAPIOperationTool:
             operation_id="getItem",
             method="get",
             path="/items/{item_id}",
-            parameters=(
-                {"name": "item_id", "in": "path", "required": True},
-            ),
+            parameters=({"name": "item_id", "in": "path", "required": True},),
         )
 
         mock_response = MagicMock()
@@ -578,9 +571,7 @@ class TestOpenAPIOperationTool:
         mock_client = AsyncMock()
         mock_client.request = AsyncMock(return_value=mock_response)
 
-        tool = OpenAPIOperationTool(
-            op, "https://api.example.com", http_client=mock_client
-        )
+        tool = OpenAPIOperationTool(op, "https://api.example.com", http_client=mock_client)
         result = await tool.execute({"item_id": "123"})
 
         # Verify URL was built correctly
@@ -609,9 +600,7 @@ class TestOpenAPIOperationTool:
         mock_client = AsyncMock()
         mock_client.request = AsyncMock(return_value=mock_response)
 
-        tool = OpenAPIOperationTool(
-            op, "https://api.example.com", http_client=mock_client
-        )
+        tool = OpenAPIOperationTool(op, "https://api.example.com", http_client=mock_client)
         result = await tool.execute({"name": "New Item"})
 
         # Verify body was sent
@@ -637,9 +626,7 @@ class TestOpenAPIOperationTool:
         mock_client = AsyncMock()
         mock_client.request = AsyncMock(return_value=mock_response)
 
-        tool = OpenAPIOperationTool(
-            op, "https://api.example.com", http_client=mock_client
-        )
+        tool = OpenAPIOperationTool(op, "https://api.example.com", http_client=mock_client)
         result = await tool.execute({"id": "nonexistent"})
 
         assert result.is_error is True
@@ -1003,12 +990,14 @@ class TestIntegration:
 
         tool = toolkit.get_tool("createWorkItem")
 
-        result = await tool.execute({
-            "workspace_slug": "my-workspace",
-            "project_id": "project-uuid",
-            "name": "Fix login bug",
-            "priority": "high",
-        })
+        result = await tool.execute(
+            {
+                "workspace_slug": "my-workspace",
+                "project_id": "project-uuid",
+                "name": "Fix login bug",
+                "priority": "high",
+            }
+        )
 
         # Verify request
         call_args = mock_client.request.call_args

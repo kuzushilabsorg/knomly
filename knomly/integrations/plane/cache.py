@@ -104,7 +104,7 @@ class PlaneEntityCache:
         Pipeline continues in all cases (context is auxiliary).
     """
 
-    client: "PlaneClient"
+    client: PlaneClient
     ttl_seconds: float = 300.0  # 5 minutes default
     refresh_timeout: float = DEFAULT_REFRESH_TIMEOUT
 
@@ -171,7 +171,7 @@ class PlaneEntityCache:
                 )
                 return True
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self._last_error = f"Timeout after {self.refresh_timeout}s"
                 logger.warning(
                     f"[plane_cache] Refresh timed out after {self.refresh_timeout}s. "
@@ -263,10 +263,7 @@ class PlaneEntityCache:
         self._states = {}
 
         # Fetch states for each project (in parallel for efficiency)
-        tasks = [
-            self._fetch_project_states(project_id)
-            for project_id in self._projects.keys()
-        ]
+        tasks = [self._fetch_project_states(project_id) for project_id in self._projects]
 
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)

@@ -4,13 +4,13 @@ Provider Registry for Knomly.
 Centralized registry for accessing and swapping providers.
 Configuration-driven provider selection with health monitoring.
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
-import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from .health import (
     HealthCheckResult,
@@ -20,9 +20,9 @@ from .health import (
 )
 
 if TYPE_CHECKING:
-    from .stt.base import STTProvider
-    from .llm.base import LLMProvider
     from .chat.base import ChatProvider
+    from .llm.base import LLMProvider
+    from .stt.base import STTProvider
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class ProviderConfig:
     name: str
     enabled: bool = True
     priority: int = 0  # Higher = preferred
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class ProviderRegistry:
@@ -75,19 +75,19 @@ class ProviderRegistry:
             enable_metrics: Enable metrics tracking
         """
         # Provider storage
-        self._stt_providers: Dict[str, "STTProvider"] = {}
-        self._llm_providers: Dict[str, "LLMProvider"] = {}
-        self._chat_providers: Dict[str, "ChatProvider"] = {}
+        self._stt_providers: dict[str, STTProvider] = {}
+        self._llm_providers: dict[str, LLMProvider] = {}
+        self._chat_providers: dict[str, ChatProvider] = {}
 
         # Provider configs
-        self._stt_configs: Dict[str, ProviderConfig] = {}
-        self._llm_configs: Dict[str, ProviderConfig] = {}
-        self._chat_configs: Dict[str, ProviderConfig] = {}
+        self._stt_configs: dict[str, ProviderConfig] = {}
+        self._llm_configs: dict[str, ProviderConfig] = {}
+        self._chat_configs: dict[str, ProviderConfig] = {}
 
         # Default provider names
-        self._default_stt: Optional[str] = None
-        self._default_llm: Optional[str] = None
-        self._default_chat: Optional[str] = None
+        self._default_stt: str | None = None
+        self._default_llm: str | None = None
+        self._default_chat: str | None = None
 
         # Health checker
         self._health_checker = ProviderHealthChecker()
@@ -95,31 +95,25 @@ class ProviderRegistry:
 
     # ==================== Validation ====================
 
-    def _validate_stt_provider(self, provider: "STTProvider") -> None:
+    def _validate_stt_provider(self, provider: STTProvider) -> None:
         """Validate STT provider has required interface."""
         if not hasattr(provider, "name"):
             raise ValueError("STT provider must have 'name' property")
-        if not hasattr(provider, "transcribe") or not callable(
-            getattr(provider, "transcribe")
-        ):
+        if not hasattr(provider, "transcribe") or not callable(provider.transcribe):
             raise ValueError("STT provider must have 'transcribe' method")
 
-    def _validate_llm_provider(self, provider: "LLMProvider") -> None:
+    def _validate_llm_provider(self, provider: LLMProvider) -> None:
         """Validate LLM provider has required interface."""
         if not hasattr(provider, "name"):
             raise ValueError("LLM provider must have 'name' property")
-        if not hasattr(provider, "complete") or not callable(
-            getattr(provider, "complete")
-        ):
+        if not hasattr(provider, "complete") or not callable(provider.complete):
             raise ValueError("LLM provider must have 'complete' method")
 
-    def _validate_chat_provider(self, provider: "ChatProvider") -> None:
+    def _validate_chat_provider(self, provider: ChatProvider) -> None:
         """Validate Chat provider has required interface."""
         if not hasattr(provider, "name"):
             raise ValueError("Chat provider must have 'name' property")
-        if not hasattr(provider, "send_message") or not callable(
-            getattr(provider, "send_message")
-        ):
+        if not hasattr(provider, "send_message") or not callable(provider.send_message):
             raise ValueError("Chat provider must have 'send_message' method")
 
     # ==================== STT Providers ====================
@@ -127,7 +121,7 @@ class ProviderRegistry:
     def register_stt(
         self,
         name: str,
-        provider: "STTProvider",
+        provider: STTProvider,
         enabled: bool = True,
         priority: int = 0,
     ) -> None:
@@ -142,9 +136,7 @@ class ProviderRegistry:
         """
         self._validate_stt_provider(provider)
         self._stt_providers[name] = provider
-        self._stt_configs[name] = ProviderConfig(
-            name=name, enabled=enabled, priority=priority
-        )
+        self._stt_configs[name] = ProviderConfig(name=name, enabled=enabled, priority=priority)
         if self._default_stt is None:
             self._default_stt = name
         logger.debug(f"Registered STT provider: {name} (priority={priority})")
@@ -164,7 +156,7 @@ class ProviderRegistry:
             raise ValueError(f"STT provider '{name}' not registered")
         self._default_stt = name
 
-    def get_stt(self, name: Optional[str] = None) -> "STTProvider":
+    def get_stt(self, name: str | None = None) -> STTProvider:
         """
         Get an STT provider by name or return default.
 
@@ -189,9 +181,7 @@ class ProviderRegistry:
 
         return self._stt_providers[provider_name]
 
-    def get_stt_with_fallback(
-        self, preferred: Optional[str] = None
-    ) -> "STTProvider":
+    def get_stt_with_fallback(self, preferred: str | None = None) -> STTProvider:
         """
         Get STT provider with fallback to healthy alternatives.
 
@@ -216,9 +206,7 @@ class ProviderRegistry:
         if self._default_stt and self._default_stt in self._stt_providers:
             config = self._stt_configs[self._default_stt]
             if config.enabled:
-                last_check = self._health_checker.get_last_check(
-                    "stt", self._default_stt
-                )
+                last_check = self._health_checker.get_last_check("stt", self._default_stt)
                 if last_check is None or last_check.status != HealthStatus.UNHEALTHY:
                     return self._stt_providers[self._default_stt]
 
@@ -233,7 +221,7 @@ class ProviderRegistry:
             reverse=True,
         )
 
-        for name, config in sorted_providers:
+        for name, _config in sorted_providers:
             last_check = self._health_checker.get_last_check("stt", name)
             if last_check is None or last_check.status != HealthStatus.UNHEALTHY:
                 return self._stt_providers[name]
@@ -241,11 +229,11 @@ class ProviderRegistry:
         raise ValueError("No healthy STT provider available")
 
     @property
-    def stt(self) -> "STTProvider":
+    def stt(self) -> STTProvider:
         """Shorthand for getting default STT provider."""
         return self.get_stt()
 
-    def list_stt_providers(self) -> List[str]:
+    def list_stt_providers(self) -> list[str]:
         """List registered STT provider names."""
         return list(self._stt_providers.keys())
 
@@ -254,7 +242,7 @@ class ProviderRegistry:
     def register_llm(
         self,
         name: str,
-        provider: "LLMProvider",
+        provider: LLMProvider,
         enabled: bool = True,
         priority: int = 0,
     ) -> None:
@@ -269,9 +257,7 @@ class ProviderRegistry:
         """
         self._validate_llm_provider(provider)
         self._llm_providers[name] = provider
-        self._llm_configs[name] = ProviderConfig(
-            name=name, enabled=enabled, priority=priority
-        )
+        self._llm_configs[name] = ProviderConfig(name=name, enabled=enabled, priority=priority)
         if self._default_llm is None:
             self._default_llm = name
         logger.debug(f"Registered LLM provider: {name} (priority={priority})")
@@ -291,7 +277,7 @@ class ProviderRegistry:
             raise ValueError(f"LLM provider '{name}' not registered")
         self._default_llm = name
 
-    def get_llm(self, name: Optional[str] = None) -> "LLMProvider":
+    def get_llm(self, name: str | None = None) -> LLMProvider:
         """
         Get an LLM provider by name or return default.
 
@@ -316,9 +302,7 @@ class ProviderRegistry:
 
         return self._llm_providers[provider_name]
 
-    def get_llm_with_fallback(
-        self, preferred: Optional[str] = None
-    ) -> "LLMProvider":
+    def get_llm_with_fallback(self, preferred: str | None = None) -> LLMProvider:
         """
         Get LLM provider with fallback to healthy alternatives.
 
@@ -343,9 +327,7 @@ class ProviderRegistry:
         if self._default_llm and self._default_llm in self._llm_providers:
             config = self._llm_configs[self._default_llm]
             if config.enabled:
-                last_check = self._health_checker.get_last_check(
-                    "llm", self._default_llm
-                )
+                last_check = self._health_checker.get_last_check("llm", self._default_llm)
                 if last_check is None or last_check.status != HealthStatus.UNHEALTHY:
                     return self._llm_providers[self._default_llm]
 
@@ -360,7 +342,7 @@ class ProviderRegistry:
             reverse=True,
         )
 
-        for name, config in sorted_providers:
+        for name, _config in sorted_providers:
             last_check = self._health_checker.get_last_check("llm", name)
             if last_check is None or last_check.status != HealthStatus.UNHEALTHY:
                 return self._llm_providers[name]
@@ -368,11 +350,11 @@ class ProviderRegistry:
         raise ValueError("No healthy LLM provider available")
 
     @property
-    def llm(self) -> "LLMProvider":
+    def llm(self) -> LLMProvider:
         """Shorthand for getting default LLM provider."""
         return self.get_llm()
 
-    def list_llm_providers(self) -> List[str]:
+    def list_llm_providers(self) -> list[str]:
         """List registered LLM provider names."""
         return list(self._llm_providers.keys())
 
@@ -381,7 +363,7 @@ class ProviderRegistry:
     def register_chat(
         self,
         name: str,
-        provider: "ChatProvider",
+        provider: ChatProvider,
         enabled: bool = True,
         priority: int = 0,
     ) -> None:
@@ -396,9 +378,7 @@ class ProviderRegistry:
         """
         self._validate_chat_provider(provider)
         self._chat_providers[name] = provider
-        self._chat_configs[name] = ProviderConfig(
-            name=name, enabled=enabled, priority=priority
-        )
+        self._chat_configs[name] = ProviderConfig(name=name, enabled=enabled, priority=priority)
         if self._default_chat is None:
             self._default_chat = name
         logger.debug(f"Registered Chat provider: {name} (priority={priority})")
@@ -418,7 +398,7 @@ class ProviderRegistry:
             raise ValueError(f"Chat provider '{name}' not registered")
         self._default_chat = name
 
-    def get_chat(self, name: Optional[str] = None) -> "ChatProvider":
+    def get_chat(self, name: str | None = None) -> ChatProvider:
         """
         Get a Chat provider by name or return default.
 
@@ -444,11 +424,11 @@ class ProviderRegistry:
         return self._chat_providers[provider_name]
 
     @property
-    def chat(self) -> "ChatProvider":
+    def chat(self) -> ChatProvider:
         """Shorthand for getting default Chat provider."""
         return self.get_chat()
 
-    def list_chat_providers(self) -> List[str]:
+    def list_chat_providers(self) -> list[str]:
         """List registered Chat provider names."""
         return list(self._chat_providers.keys())
 
@@ -456,8 +436,8 @@ class ProviderRegistry:
 
     async def check_health(
         self,
-        provider_types: Optional[List[str]] = None,
-    ) -> List[HealthCheckResult]:
+        provider_types: list[str] | None = None,
+    ) -> list[HealthCheckResult]:
         """
         Check health of all registered providers.
 
@@ -472,19 +452,19 @@ class ProviderRegistry:
 
         # Check STT providers
         if "stt" in types_to_check:
-            for name, provider in self._stt_providers.items():
+            for _name, provider in self._stt_providers.items():
                 result = await self._health_checker.check_stt(provider)
                 results.append(result)
 
         # Check LLM providers
         if "llm" in types_to_check:
-            for name, provider in self._llm_providers.items():
+            for _name, provider in self._llm_providers.items():
                 result = await self._health_checker.check_llm(provider)
                 results.append(result)
 
         # Check Chat providers
         if "chat" in types_to_check:
-            for name, provider in self._chat_providers.items():
+            for _name, provider in self._chat_providers.items():
                 result = await self._health_checker.check_chat(provider)
                 results.append(result)
 
@@ -493,7 +473,7 @@ class ProviderRegistry:
     async def check_health_concurrent(
         self,
         timeout: float = 30.0,
-    ) -> List[HealthCheckResult]:
+    ) -> list[HealthCheckResult]:
         """
         Check health of all providers concurrently.
 
@@ -505,13 +485,13 @@ class ProviderRegistry:
         """
         tasks = []
 
-        for name, provider in self._stt_providers.items():
+        for _name, provider in self._stt_providers.items():
             tasks.append(self._health_checker.check_stt(provider))
 
-        for name, provider in self._llm_providers.items():
+        for _name, provider in self._llm_providers.items():
             tasks.append(self._health_checker.check_llm(provider))
 
-        for name, provider in self._chat_providers.items():
+        for _name, provider in self._chat_providers.items():
             tasks.append(self._health_checker.check_chat(provider))
 
         if not tasks:
@@ -520,7 +500,7 @@ class ProviderRegistry:
         results = await asyncio.wait_for(asyncio.gather(*tasks), timeout=timeout)
         return list(results)
 
-    def get_health_summary(self) -> Dict[str, Any]:
+    def get_health_summary(self) -> dict[str, Any]:
         """Get summary of provider health status."""
         all_checks = self._health_checker.get_all_checks()
 
@@ -543,13 +523,11 @@ class ProviderRegistry:
             "providers": [c.to_dict() for c in all_checks],
         }
 
-    def get_metrics(
-        self, provider_type: str, provider_name: str
-    ) -> ProviderMetrics:
+    def get_metrics(self, provider_type: str, provider_name: str) -> ProviderMetrics:
         """Get metrics for a specific provider."""
         return self._health_checker.get_metrics(provider_type, provider_name)
 
-    def get_all_metrics(self) -> List[Dict[str, Any]]:
+    def get_all_metrics(self) -> list[dict[str, Any]]:
         """Get metrics for all providers."""
         return [m.to_dict() for m in self._health_checker.get_all_metrics()]
 
@@ -559,7 +537,7 @@ class ProviderRegistry:
         provider_name: str,
         success: bool,
         latency_ms: float,
-        error: Optional[str] = None,
+        error: str | None = None,
     ) -> None:
         """Record a request to a provider (for metrics)."""
         if not self._enable_metrics:
@@ -573,7 +551,7 @@ class ProviderRegistry:
 
     # ==================== Utility Methods ====================
 
-    def list_providers(self) -> Dict[str, Dict[str, Any]]:
+    def list_providers(self) -> dict[str, dict[str, Any]]:
         """List all registered providers and defaults."""
         return {
             "stt": {
@@ -656,7 +634,7 @@ class ProviderRegistry:
 
 
 # Global registry instance (can be replaced in tests)
-_global_registry: Optional[ProviderRegistry] = None
+_global_registry: ProviderRegistry | None = None
 
 
 def get_registry() -> ProviderRegistry:

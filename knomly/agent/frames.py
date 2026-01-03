@@ -47,9 +47,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from knomly.pipeline.frames.base import Frame
+
+if TYPE_CHECKING:
+    from knomly.tools.base import ToolResult
 
 
 class AgentAction(Enum):
@@ -328,7 +331,7 @@ def create_initial_plan(
 def create_tool_result_from_tool_output(
     tool_name: str,
     tool_call_frame: ToolCallFrame,
-    result: "ToolResult",  # from tools.base
+    result: ToolResult,  # from tools.base
     execution_time_ms: float,
 ) -> ToolResultFrame:
     """
@@ -343,7 +346,6 @@ def create_tool_result_from_tool_output(
     Returns:
         ToolResultFrame for the frame stream
     """
-    from knomly.tools.base import ToolResult as ToolResultType
 
     return ToolResultFrame(
         tool_name=tool_name,

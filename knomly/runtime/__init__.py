@@ -35,16 +35,16 @@ Usage:
     result = await pipeline.execute(initial_frame)
 """
 
-from .resolver import PipelineResolver
 from .builder import RuntimeBuilder
 from .loaders import (
     FileDefinitionLoader,
     MemoryDefinitionLoader,
 )
+from .resolver import PipelineResolver
 
 __all__ = [
-    "PipelineResolver",
-    "RuntimeBuilder",
     "FileDefinitionLoader",
     "MemoryDefinitionLoader",
+    "PipelineResolver",
+    "RuntimeBuilder",
 ]

@@ -35,7 +35,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -93,10 +93,10 @@ class LLMDecision(BaseModel):
     """
 
     action: str = Field(..., description="Action type: tool_call, respond, or ask_user")
-    tool: Optional[str] = None
+    tool: str | None = None
     arguments: dict[str, Any] = Field(default_factory=dict)
-    message: Optional[str] = None
-    question: Optional[str] = None
+    message: str | None = None
+    question: str | None = None
     reasoning: str = Field(default="")
 
     def is_tool_call(self) -> bool:
@@ -189,8 +189,8 @@ class AgentProcessor:
     def __init__(
         self,
         *,
-        llm: "LLMProvider",
-        tools: "ToolRegistry",
+        llm: LLMProvider,
+        tools: ToolRegistry,
         max_iterations: int = 5,
     ):
         """
@@ -208,7 +208,7 @@ class AgentProcessor:
     async def decide(
         self,
         goal: str,
-        history: list["Frame"],
+        history: list[Frame],
         iteration: int,
     ) -> PlanFrame | ToolCallFrame | AgentResponseFrame:
         """
@@ -230,8 +230,7 @@ class AgentProcessor:
         user_message = self._build_user_message(goal, history, iteration)
 
         logger.info(
-            f"[agent_processor] Iteration {iteration}: "
-            f"Deciding action for goal: {goal[:50]}..."
+            f"[agent_processor] Iteration {iteration}: " f"Deciding action for goal: {goal[:50]}..."
         )
 
         # Call LLM
@@ -268,7 +267,7 @@ class AgentProcessor:
     def _build_system_prompt(
         self,
         goal: str,
-        history: list["Frame"],
+        history: list[Frame],
     ) -> str:
         """Build the system prompt with tools and context."""
         # Build tools section
@@ -314,7 +313,7 @@ class AgentProcessor:
 
         return "\n".join(sections) if sections else "No tools available."
 
-    def _build_entity_context(self, history: list["Frame"]) -> str:
+    def _build_entity_context(self, history: list[Frame]) -> str:
         """
         Build entity context from frame metadata.
 
@@ -369,7 +368,7 @@ class AgentProcessor:
 
         return "\n".join(lines) if len(lines) > 1 else ""
 
-    def _build_context_section(self, history: list["Frame"]) -> str:
+    def _build_context_section(self, history: list[Frame]) -> str:
         """Build context from frame history."""
         if not history:
             return "No previous context."
@@ -385,8 +384,7 @@ class AgentProcessor:
                     )
                 elif frame.frame_type == "tool_call":
                     lines.append(
-                        f"[Tool Call] {frame.tool_name}: "
-                        f"{json.dumps(frame.tool_arguments)}"
+                        f"[Tool Call] {frame.tool_name}: " f"{json.dumps(frame.tool_arguments)}"
                     )
                 elif frame.frame_type == "extraction":
                     if hasattr(frame, "summary"):
@@ -402,7 +400,7 @@ class AgentProcessor:
     def _build_user_message(
         self,
         goal: str,
-        history: list["Frame"],
+        history: list[Frame],
         iteration: int,
     ) -> str:
         """Build the user message with goal and iteration."""
@@ -428,7 +426,7 @@ class AgentProcessor:
         content: str,
         goal: str,
         iteration: int,
-        history: list["Frame"],
+        history: list[Frame],
     ) -> PlanFrame | ToolCallFrame | AgentResponseFrame:
         """
         Parse and validate LLM response into appropriate frame.
@@ -479,9 +477,7 @@ class AgentProcessor:
                         failure_reason=f"Unknown tool: {tool_name}",
                     )
 
-                logger.info(
-                    f"[agent_processor] Decided to call tool: {tool_name}"
-                )
+                logger.info(f"[agent_processor] Decided to call tool: {tool_name}")
 
                 return ToolCallFrame(
                     tool_name=tool_name,

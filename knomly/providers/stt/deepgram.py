@@ -4,17 +4,18 @@ Deepgram STT Provider for Knomly.
 Uses Deepgram's nova-2 model for accurate speech transcription
 with language detection and word-level timestamps.
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .base import BaseSTTProvider, TranscriptionResult
 
 logger = logging.getLogger(__name__)
 
 # Language code to name mapping for common languages
-LANGUAGE_NAMES: Dict[str, str] = {
+LANGUAGE_NAMES: dict[str, str] = {
     "en": "English",
     "en-US": "English (US)",
     "en-GB": "English (UK)",
@@ -57,7 +58,6 @@ LANGUAGE_NAMES: Dict[str, str] = {
     "kn": "Kannada",
     "ml": "Malayalam",
     "pa": "Punjabi",
-    "ta": "Tamil",
 }
 
 
@@ -152,7 +152,7 @@ class DeepgramSTTProvider(BaseSTTProvider):
         }
         return mime_map.get(mime_type.lower(), mime_type)
 
-    def _extract_words(self, response: Any) -> Optional[List[Dict[str, Any]]]:
+    def _extract_words(self, response: Any) -> list[dict[str, Any]] | None:
         """Extract word-level data from Deepgram response."""
         try:
             words = response.results.channels[0].alternatives[0].words
@@ -168,7 +168,7 @@ class DeepgramSTTProvider(BaseSTTProvider):
         except (AttributeError, IndexError):
             return None
 
-    def _extract_duration(self, response: Any) -> Optional[int]:
+    def _extract_duration(self, response: Any) -> int | None:
         """Extract audio duration from Deepgram response."""
         try:
             duration_seconds = response.metadata.duration
@@ -194,7 +194,7 @@ class DeepgramSTTProvider(BaseSTTProvider):
         self,
         audio_bytes: bytes,
         mime_type: str = "audio/ogg",
-        language_hint: Optional[str] = None,
+        language_hint: str | None = None,
     ) -> TranscriptionResult:
         """
         Transcribe audio using Deepgram.
@@ -234,9 +234,7 @@ class DeepgramSTTProvider(BaseSTTProvider):
 
             # Perform transcription
             logger.debug(f"Sending {len(audio_bytes)} bytes to Deepgram ({mime_type})")
-            response = await client.listen.asyncrest.v("1").transcribe_file(
-                source, options
-            )
+            response = await client.listen.asyncrest.v("1").transcribe_file(source, options)
 
             # Extract transcript
             try:
@@ -345,7 +343,7 @@ class DeepgramStreamingSTTProvider(BaseSTTProvider):
         self,
         audio_bytes: bytes,
         mime_type: str = "audio/ogg",
-        language_hint: Optional[str] = None,
+        language_hint: str | None = None,
     ) -> TranscriptionResult:
         """
         Transcribe audio using streaming API.
@@ -395,8 +393,8 @@ class DeepgramStreamingSTTProvider(BaseSTTProvider):
 
 
 __all__ = [
+    "LANGUAGE_NAMES",
     "DeepgramSTTProvider",
     "DeepgramStreamingSTTProvider",
     "get_language_name",
-    "LANGUAGE_NAMES",
 ]

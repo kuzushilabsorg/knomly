@@ -1,8 +1,8 @@
 """
 Tests for Knomly observability module.
 """
-import json
-from datetime import datetime, timezone
+
+from datetime import UTC, datetime
 
 import pytest
 
@@ -10,7 +10,6 @@ from knomly.pipeline import (
     AuditEntry,
     InMemoryAuditRepository,
     JSONLogger,
-    LogLevel,
     NoOpSpan,
     NoOpTracer,
     PipelineContext,
@@ -23,7 +22,6 @@ from knomly.pipeline import (
     set_tracer,
 )
 from knomly.pipeline.frames import AudioInputFrame
-
 
 # =============================================================================
 # JSONLogger Tests
@@ -183,7 +181,7 @@ class TestAuditEntry:
         entry = AuditEntry(
             execution_id="exec-123",
             request_id="req-456",
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             pipeline_name="standup",
             processors=["a", "b", "c"],
             status="completed",
@@ -196,7 +194,7 @@ class TestAuditEntry:
         assert entry.success is True
 
     def test_to_dict(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         entry = AuditEntry(
             execution_id="exec-123",
             request_id="req-456",
@@ -234,7 +232,7 @@ class TestInMemoryAuditRepository:
         return AuditEntry(
             execution_id="exec-123",
             request_id="req-456",
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             pipeline_name="test",
             processors=["a"],
             status="completed",
@@ -256,7 +254,7 @@ class TestInMemoryAuditRepository:
         entry1 = AuditEntry(
             execution_id="exec-1",
             request_id="req-shared",
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             pipeline_name="test",
             processors=[],
             status="started",
@@ -264,7 +262,7 @@ class TestInMemoryAuditRepository:
         entry2 = AuditEntry(
             execution_id="exec-2",
             request_id="req-shared",
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             pipeline_name="test",
             processors=[],
             status="completed",
@@ -290,7 +288,7 @@ class TestInMemoryAuditRepository:
             entry = AuditEntry(
                 execution_id=f"exec-{i}",
                 request_id="req",
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 pipeline_name="test",
                 processors=[],
                 status="completed",
@@ -306,7 +304,7 @@ class TestInMemoryAuditRepository:
             AuditEntry(
                 execution_id="exec-1",
                 request_id="req",
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 pipeline_name="test",
                 processors=[],
                 status="completed",
@@ -507,7 +505,7 @@ class TestCreateAuditEntry:
         ctx = PipelineContext()
         ctx.routing_decisions.append(
             RoutingDecision(
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 router_name="Conditional",
                 frame_id=ctx.execution_id,
                 frame_type="Frame",

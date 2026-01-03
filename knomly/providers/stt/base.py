@@ -3,11 +3,12 @@ STT (Speech-to-Text) Provider Protocol for Knomly.
 
 Defines the interface for speech transcription providers.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 @dataclass
@@ -31,11 +32,11 @@ class TranscriptionResult:
     detected_language: str = "en"
     language_name: str = "English"
     confidence: float = 0.0
-    words: Optional[List[Dict[str, Any]]] = None
-    duration_ms: Optional[int] = None
+    words: list[dict[str, Any]] | None = None
+    duration_ms: int | None = None
     provider: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "original_text": self.original_text,
             "english_text": self.english_text,
@@ -71,7 +72,7 @@ class STTProvider(Protocol):
         self,
         audio_bytes: bytes,
         mime_type: str = "audio/ogg",
-        language_hint: Optional[str] = None,
+        language_hint: str | None = None,
     ) -> TranscriptionResult:
         """
         Transcribe audio to text.
@@ -105,7 +106,7 @@ class BaseSTTProvider(ABC):
         self,
         audio_bytes: bytes,
         mime_type: str = "audio/ogg",
-        language_hint: Optional[str] = None,
+        language_hint: str | None = None,
     ) -> TranscriptionResult:
         """Transcribe audio to text."""
         pass

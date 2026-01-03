@@ -21,12 +21,11 @@ Configuration lives in JSON/DB and is loaded dynamically.
 """
 
 import asyncio
-from pathlib import Path
-
 
 # =============================================================================
 # Example 1: Basic Setup with FileDefinitionLoader (Development)
 # =============================================================================
+
 
 async def example_basic_file_loader():
     """
@@ -42,7 +41,7 @@ async def example_basic_file_loader():
         └── providers/
             └── default.json        # Provider definitions
     """
-    from knomly.runtime import PipelineResolver, FileDefinitionLoader
+    from knomly.runtime import FileDefinitionLoader, PipelineResolver
 
     # 1. Create loader pointing to config directory
     loader = FileDefinitionLoader("config/")
@@ -67,19 +66,20 @@ async def example_basic_file_loader():
 # Example 2: Memory Loader for Testing
 # =============================================================================
 
+
 async def example_memory_loader_for_testing():
     """
     In-memory loader for unit tests - no files needed.
     """
-    from knomly.runtime import PipelineResolver, MemoryDefinitionLoader
     from knomly.adapters.schemas import (
-        PipelinePacket,
-        SessionContext,
         AgentContext,
+        PipelinePacket,
         PipelineProviderConfig,
         ProviderDefinition,
+        SessionContext,
         ToolDefinition,
     )
+    from knomly.runtime import MemoryDefinitionLoader, PipelineResolver
 
     # 1. Create in-memory loader
     loader = MemoryDefinitionLoader()
@@ -141,16 +141,16 @@ async def example_memory_loader_for_testing():
 # Example 3: Full Webhook Integration Pattern
 # =============================================================================
 
+
 async def example_webhook_integration():
     """
     How to wire PipelineResolver into a webhook handler.
 
     This is the "Cutover" pattern - replacing static builders with dynamic resolution.
     """
-    from knomly.runtime import PipelineResolver, FileDefinitionLoader
-    from knomly.adapters import GenericServiceFactory
     from knomly.adapters.base import ToolBuilder
     from knomly.adapters.openapi_adapter import OpenAPIToolAdapter
+    from knomly.runtime import FileDefinitionLoader, PipelineResolver
 
     # ==========================================================================
     # Application Startup (run once)
@@ -170,6 +170,7 @@ async def example_webhook_integration():
 
     # 3. Create service factory for providers
     from knomly.adapters.service_factory import create_knomly_service_factory
+
     service_factory = create_knomly_service_factory()
 
     # 4. Create resolver with all dependencies
@@ -226,16 +227,17 @@ async def example_webhook_integration():
 # Example 4: Building Tools Only (Integration with Existing Pipeline)
 # =============================================================================
 
+
 async def example_tools_only():
     """
     When you only need tools (not full pipeline).
 
     Useful for integrating with existing pipeline code.
     """
-    from knomly.runtime import PipelineResolver, MemoryDefinitionLoader
-    from knomly.adapters.schemas import ToolDefinition
     from knomly.adapters.base import ToolBuilder
     from knomly.adapters.openapi_adapter import OpenAPIToolAdapter
+    from knomly.adapters.schemas import ToolDefinition
+    from knomly.runtime import MemoryDefinitionLoader, PipelineResolver
 
     # Setup
     loader = MemoryDefinitionLoader()
@@ -276,6 +278,7 @@ async def example_tools_only():
 # Example 5: Custom Loader Implementation (MongoDB)
 # =============================================================================
 
+
 class MongoDefinitionLoader:
     """
     Example MongoDB loader implementation.
@@ -295,13 +298,15 @@ class MongoDefinitionLoader:
         from knomly.adapters.schemas import ToolDefinition
 
         # Query tools collection
-        cursor = self.db.tools.find({
-            "$or": [
-                {"user_id": user_id},
-                {"user_id": {"$exists": False}},  # Global tools
-            ],
-            "enabled": True,
-        })
+        cursor = self.db.tools.find(
+            {
+                "$or": [
+                    {"user_id": user_id},
+                    {"user_id": {"$exists": False}},  # Global tools
+                ],
+                "enabled": True,
+            }
+        )
 
         tools = []
         async for doc in cursor:
@@ -343,10 +348,12 @@ class MongoDefinitionLoader:
         """Load provider config from MongoDB."""
         from knomly.adapters.schemas import ProviderDefinition
 
-        doc = await self.db.providers.find_one({
-            "provider_type": provider_type,
-            "provider_code": provider_code,
-        })
+        doc = await self.db.providers.find_one(
+            {
+                "provider_type": provider_type,
+                "provider_code": provider_code,
+            }
+        )
 
         if doc:
             return ProviderDefinition.model_validate(doc)
@@ -377,11 +384,12 @@ async def example_mongodb_production():
 # Example 6: Cache Control
 # =============================================================================
 
+
 async def example_cache_control():
     """
     Control caching behavior for different scenarios.
     """
-    from knomly.runtime import PipelineResolver, MemoryDefinitionLoader
+    from knomly.runtime import MemoryDefinitionLoader, PipelineResolver
     from knomly.runtime.resolver import InMemoryPipelineCache
 
     loader = MemoryDefinitionLoader()
@@ -502,6 +510,7 @@ EXAMPLE_TOOLS_JSON = """
 # =============================================================================
 # Main: Run Examples
 # =============================================================================
+
 
 async def main():
     """Run examples."""

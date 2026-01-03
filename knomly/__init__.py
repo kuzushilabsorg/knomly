@@ -34,19 +34,19 @@ __license__ = "MIT"
 
 # Core exports for convenient imports
 from knomly.pipeline import Pipeline, PipelineBuilder, PipelineContext, PipelineResult
-from knomly.pipeline.processor import Processor
 from knomly.pipeline.frames import Frame
+from knomly.pipeline.processor import Processor
 
 __all__ = [
-    # Version info
-    "__version__",
-    "__author__",
-    "__license__",
+    "Frame",
     # Core pipeline
     "Pipeline",
     "PipelineBuilder",
     "PipelineContext",
     "PipelineResult",
     "Processor",
-    "Frame",
+    "__author__",
+    "__license__",
+    # Version info
+    "__version__",
 ]

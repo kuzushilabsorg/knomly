@@ -3,11 +3,12 @@ Configuration Service for Knomly.
 
 Provides access to MongoDB-stored configuration with caching.
 """
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from .schemas import PipelineAuditLog, PromptConfig, UserConfig
 
@@ -18,19 +19,19 @@ class TTLCache:
     """Simple TTL cache for configuration data."""
 
     def __init__(self, ttl_seconds: int = 300):
-        self._cache: Dict[str, tuple[Any, datetime]] = {}
+        self._cache: dict[str, tuple[Any, datetime]] = {}
         self._ttl = timedelta(seconds=ttl_seconds)
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         if key in self._cache:
             value, expires = self._cache[key]
-            if datetime.now(timezone.utc) < expires:
+            if datetime.now(UTC) < expires:
                 return value
             del self._cache[key]
         return None
 
     def set(self, key: str, value: Any) -> None:
-        expires = datetime.now(timezone.utc) + self._ttl
+        expires = datetime.now(UTC) + self._ttl
         self._cache[key] = (value, expires)
 
     def clear(self) -> None:
@@ -81,8 +82,7 @@ class ConfigurationService:
             logger.info(f"Connected to MongoDB database: {self._database_name}")
         except ImportError:
             raise ImportError(
-                "motor package is required for MongoDB. "
-                "Install with: pip install motor"
+                "motor package is required for MongoDB. " "Install with: pip install motor"
             )
 
     async def close(self) -> None:
@@ -99,7 +99,7 @@ class ConfigurationService:
 
     # ==================== Prompts ====================
 
-    async def get_prompt(self, name: str) -> Optional[PromptConfig]:
+    async def get_prompt(self, name: str) -> PromptConfig | None:
         """
         Get a prompt configuration by name.
 
@@ -117,9 +117,7 @@ class ConfigurationService:
 
         await self._ensure_connected()
 
-        doc = await self._db.prompts.find_one(
-            {"name": name, "active": True}
-        )
+        doc = await self._db.prompts.find_one({"name": name, "active": True})
 
         if doc is None:
             return None
@@ -137,7 +135,7 @@ class ConfigurationService:
         """
         await self._ensure_connected()
 
-        prompt.updated_at = datetime.now(timezone.utc)
+        prompt.updated_at = datetime.now(UTC)
         await self._db.prompts.update_one(
             {"name": prompt.name},
             {"$set": prompt.model_dump()},
@@ -147,7 +145,7 @@ class ConfigurationService:
         # Invalidate cache
         self._cache.clear()
 
-    async def list_prompts(self, active_only: bool = True) -> List[PromptConfig]:
+    async def list_prompts(self, active_only: bool = True) -> list[PromptConfig]:
         """
         List all prompts.
 
@@ -170,7 +168,7 @@ class ConfigurationService:
 
     # ==================== Users ====================
 
-    async def get_user_by_phone(self, phone: str) -> Optional[UserConfig]:
+    async def get_user_by_phone(self, phone: str) -> UserConfig | None:
         """
         Get user configuration by phone number.
 
@@ -191,9 +189,7 @@ class ConfigurationService:
 
         await self._ensure_connected()
 
-        doc = await self._db.users.find_one(
-            {"phone": normalized, "active": True}
-        )
+        doc = await self._db.users.find_one({"phone": normalized, "active": True})
 
         if doc is None:
             return None
@@ -211,7 +207,7 @@ class ConfigurationService:
         """
         await self._ensure_connected()
 
-        user.updated_at = datetime.now(timezone.utc)
+        user.updated_at = datetime.now(UTC)
         await self._db.users.update_one(
             {"phone": user.phone},
             {"$set": user.model_dump()},
@@ -221,7 +217,7 @@ class ConfigurationService:
         # Invalidate cache
         self._cache.clear()
 
-    async def list_users(self, active_only: bool = True) -> List[UserConfig]:
+    async def list_users(self, active_only: bool = True) -> list[UserConfig]:
         """
         List all users.
 
@@ -257,8 +253,8 @@ class ConfigurationService:
     async def get_recent_executions(
         self,
         limit: int = 10,
-        phone: Optional[str] = None,
-    ) -> List[PipelineAuditLog]:
+        phone: str | None = None,
+    ) -> list[PipelineAuditLog]:
         """
         Get recent pipeline executions.
 
@@ -275,9 +271,7 @@ class ConfigurationService:
         if phone:
             query["sender_phone"] = self._normalize_phone(phone)
 
-        cursor = self._db.pipeline_audit.find(query).sort(
-            "started_at", -1
-        ).limit(limit)
+        cursor = self._db.pipeline_audit.find(query).sort("started_at", -1).limit(limit)
 
         logs = []
         async for doc in cursor:

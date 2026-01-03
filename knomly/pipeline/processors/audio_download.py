@@ -3,6 +3,7 @@ Audio Download Processor for Knomly.
 
 Downloads audio from Twilio media URLs.
 """
+
 from __future__ import annotations
 
 import logging
@@ -14,7 +15,7 @@ from ..processor import Processor
 
 if TYPE_CHECKING:
     from ..context import PipelineContext
-    from ..frames import AudioInputFrame, Frame
+    from ..frames import Frame
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +46,9 @@ class AudioDownloadProcessor(Processor):
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | None:
         # Import here to avoid circular imports
         from ..frames import AudioInputFrame
 

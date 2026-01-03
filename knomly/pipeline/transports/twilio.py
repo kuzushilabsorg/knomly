@@ -4,6 +4,7 @@ Twilio Transport Adapter for Knomly.
 Handles WhatsApp messaging via Twilio's API.
 Implements the TransportAdapter protocol for bidirectional communication.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -80,9 +81,9 @@ class TwilioTransport:
 
     async def normalize_request(
         self,
-        request: "Request",
+        request: Request,
         form_data: dict[str, Any] | None = None,
-    ) -> "AudioInputFrame":
+    ) -> AudioInputFrame:
         """
         Convert Twilio webhook to AudioInputFrame.
 

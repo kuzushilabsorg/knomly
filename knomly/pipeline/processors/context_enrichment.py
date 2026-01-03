@@ -39,14 +39,16 @@ Flow:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from knomly.pipeline.processor import Processor
-from knomly.pipeline.frames.base import Frame
 
 if TYPE_CHECKING:
-    from knomly.pipeline.context import PipelineContext
+    from collections.abc import Sequence
+
     from knomly.integrations.plane.cache import PlaneEntityCache
+    from knomly.pipeline.context import PipelineContext
+    from knomly.pipeline.frames.base import Frame
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +80,7 @@ class ContextEnrichmentProcessor(Processor):
     def __init__(
         self,
         *,
-        plane_cache: "PlaneEntityCache | None" = None,
+        plane_cache: PlaneEntityCache | None = None,
         auto_refresh: bool = True,
     ):
         """
@@ -98,7 +100,7 @@ class ContextEnrichmentProcessor(Processor):
     async def process(
         self,
         frame: Frame,
-        ctx: "PipelineContext",
+        ctx: PipelineContext,
     ) -> Frame | Sequence[Frame] | None:
         """
         Enrich frame with entity context.
@@ -161,9 +163,7 @@ class ContextEnrichmentProcessor(Processor):
             return {}
 
         # Use safe_get_context which handles all errors gracefully
-        return await self._plane_cache.safe_get_context(
-            auto_refresh=self._auto_refresh
-        )
+        return await self._plane_cache.safe_get_context(auto_refresh=self._auto_refresh)
 
     def _log_context_snapshot(self, enrichments: dict, frame: Frame) -> None:
         """

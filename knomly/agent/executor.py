@@ -62,7 +62,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -84,9 +84,11 @@ from .result import (
 
 if TYPE_CHECKING:
     from knomly.pipeline.frames.base import Frame
+    from knomly.providers.llm import LLMProvider
     from knomly.tools import ToolRegistry
-    from .processor import AgentProcessor
+
     from .memory import ExecutionMemory
+    from .processor import AgentProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -143,11 +145,11 @@ class AgentExecutor:
     def __init__(
         self,
         *,
-        processor: "AgentProcessor",
-        tools: "ToolRegistry",
+        processor: AgentProcessor,
+        tools: ToolRegistry,
         max_iterations: int = 5,
         timeout_seconds: float = 60.0,
-        memory: "ExecutionMemory | None" = None,
+        memory: ExecutionMemory | None = None,
     ):
         """
         Initialize the executor.
@@ -168,7 +170,7 @@ class AgentExecutor:
     async def run(
         self,
         goal: str,
-        initial_context: "Frame | None" = None,
+        initial_context: Frame | None = None,
         session_id: str | None = None,
     ) -> AgentResult:
         """
@@ -189,7 +191,7 @@ class AgentExecutor:
 
         frames: list[Frame] = []
         tools_called: list[str] = []
-        started_at = datetime.now(timezone.utc)
+        started_at = datetime.now(UTC)
         restored_iterations = 0
 
         # Try to restore from memory if session exists
@@ -210,8 +212,7 @@ class AgentExecutor:
             if self._memory and effective_session_id:
                 await self._memory.persist_frame(effective_session_id, initial_context)
             logger.info(
-                f"[agent_executor] Starting with context frame: "
-                f"{initial_context.frame_type}"
+                f"[agent_executor] Starting with context frame: " f"{initial_context.frame_type}"
             )
 
         logger.info(
@@ -278,9 +279,7 @@ class AgentExecutor:
 
                 elif isinstance(decision, ToolCallFrame):
                     # Execute the tool
-                    logger.info(
-                        f"[agent_executor] Executing tool: {decision.tool_name}"
-                    )
+                    logger.info(f"[agent_executor] Executing tool: {decision.tool_name}")
 
                     result_frame = await self._execute_tool(decision)
                     frames.append(result_frame)
@@ -298,8 +297,7 @@ class AgentExecutor:
                         )
                     else:
                         logger.warning(
-                            f"[agent_executor] Tool failed: "
-                            f"{result_frame.error_message}"
+                            f"[agent_executor] Tool failed: " f"{result_frame.error_message}"
                         )
 
                     # Continue loop to let agent process result
@@ -307,8 +305,7 @@ class AgentExecutor:
                 elif isinstance(decision, PlanFrame):
                     # Agent is still thinking
                     logger.debug(
-                        f"[agent_executor] Agent planning: "
-                        f"{decision.reasoning[:100]}..."
+                        f"[agent_executor] Agent planning: " f"{decision.reasoning[:100]}..."
                     )
 
                     # If agent keeps planning without action, it might be stuck
@@ -317,8 +314,7 @@ class AgentExecutor:
                 else:
                     # Unknown frame type
                     logger.warning(
-                        f"[agent_executor] Unknown decision type: "
-                        f"{type(decision).__name__}"
+                        f"[agent_executor] Unknown decision type: " f"{type(decision).__name__}"
                     )
 
                 # Emit control frame for observability
@@ -334,9 +330,7 @@ class AgentExecutor:
                     await self._memory.persist_frame(effective_session_id, control_frame)
 
             # Max iterations reached
-            logger.warning(
-                f"[agent_executor] Max iterations ({self._max_iterations}) reached"
-            )
+            logger.warning(f"[agent_executor] Max iterations ({self._max_iterations}) reached")
             return max_iterations_result(
                 frames=tuple(frames),
                 max_iterations=self._max_iterations,
@@ -461,9 +455,7 @@ class AgentExecutor:
             }
 
         except Exception as e:
-            logger.warning(
-                f"[agent_executor] Failed to restore from memory: {e}"
-            )
+            logger.warning(f"[agent_executor] Failed to restore from memory: {e}")
             return None
 
 
@@ -474,11 +466,11 @@ class AgentExecutor:
 
 def create_agent(
     *,
-    llm: "LLMProvider",
-    tools: "ToolRegistry",
+    llm: LLMProvider,
+    tools: ToolRegistry,
     max_iterations: int = 5,
     timeout_seconds: float = 60.0,
-    memory: "ExecutionMemory | None" = None,
+    memory: ExecutionMemory | None = None,
 ) -> AgentExecutor:
     """
     Create a fully configured agent.

@@ -96,7 +96,7 @@ class ContentBlock:
         content: str,
         *,
         annotations: dict[str, Any] | None = None,
-    ) -> "ContentBlock":
+    ) -> ContentBlock:
         """Create a text content block."""
         return cls(
             type=ContentType.TEXT,
@@ -112,7 +112,7 @@ class ContentBlock:
         cls,
         data: bytes,
         mime_type: str = "image/png",
-    ) -> "ContentBlock":
+    ) -> ContentBlock:
         """Create an image content block."""
         return cls(
             type=ContentType.IMAGE,
@@ -126,7 +126,7 @@ class ContentBlock:
         uri: str,
         name: str | None = None,
         mime_type: str | None = None,
-    ) -> "ContentBlock":
+    ) -> ContentBlock:
         """Create a resource link content block."""
         return cls(
             type=ContentType.RESOURCE_LINK,

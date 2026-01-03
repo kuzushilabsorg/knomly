@@ -3,12 +3,13 @@ LLM Provider Protocol for Knomly.
 
 Defines the interface for Large Language Model providers.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 class MessageRole(str, Enum):
@@ -32,26 +33,26 @@ class Message:
 
     role: MessageRole
     content: str
-    name: Optional[str] = None
+    name: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = {"role": self.role.value, "content": self.content}
         if self.name:
             result["name"] = self.name
         return result
 
     @classmethod
-    def system(cls, content: str) -> "Message":
+    def system(cls, content: str) -> Message:
         """Create a system message."""
         return cls(role=MessageRole.SYSTEM, content=content)
 
     @classmethod
-    def user(cls, content: str) -> "Message":
+    def user(cls, content: str) -> Message:
         """Create a user message."""
         return cls(role=MessageRole.USER, content=content)
 
     @classmethod
-    def assistant(cls, content: str) -> "Message":
+    def assistant(cls, content: str) -> Message:
         """Create an assistant message."""
         return cls(role=MessageRole.ASSISTANT, content=content)
 
@@ -71,7 +72,7 @@ class LLMResponse:
 
     content: str
     model: str = ""
-    usage: Dict[str, int] = field(default_factory=dict)
+    usage: dict[str, int] = field(default_factory=dict)
     finish_reason: str = "stop"
     provider: str = ""
 
@@ -87,7 +88,7 @@ class LLMResponse:
     def total_tokens(self) -> int:
         return self.input_tokens + self.output_tokens
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "content": self.content,
             "model": self.model,
@@ -110,11 +111,11 @@ class LLMConfig:
         response_format: Format specification (e.g., "json")
     """
 
-    model: Optional[str] = None  # Use provider default if None
+    model: str | None = None  # Use provider default if None
     temperature: float = 0.7
     max_tokens: int = 1024
     top_p: float = 1.0
-    response_format: Optional[str] = None  # "json" for JSON mode
+    response_format: str | None = None  # "json" for JSON mode
 
 
 @runtime_checkable
@@ -139,8 +140,8 @@ class LLMProvider(Protocol):
 
     async def complete(
         self,
-        messages: List[Message],
-        config: Optional[LLMConfig] = None,
+        messages: list[Message],
+        config: LLMConfig | None = None,
     ) -> LLMResponse:
         """
         Generate a completion from messages.
@@ -174,17 +175,17 @@ class BaseLLMProvider(ABC):
     @abstractmethod
     async def complete(
         self,
-        messages: List[Message],
-        config: Optional[LLMConfig] = None,
+        messages: list[Message],
+        config: LLMConfig | None = None,
     ) -> LLMResponse:
         """Generate a completion from messages."""
         pass
 
     async def complete_json(
         self,
-        messages: List[Message],
-        config: Optional[LLMConfig] = None,
-    ) -> Dict[str, Any]:
+        messages: list[Message],
+        config: LLMConfig | None = None,
+    ) -> dict[str, Any]:
         """
         Generate a JSON completion from messages.
 

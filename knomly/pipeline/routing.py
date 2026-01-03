@@ -12,26 +12,26 @@ Design Philosophy:
 
 See ADR-001 for design decisions.
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
 from abc import ABC
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
-    Awaitable,
-    Callable,
     Protocol,
-    Sequence,
     runtime_checkable,
 )
-from uuid import UUID
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from .context import PipelineContext
     from .frames import Frame
 
@@ -64,7 +64,7 @@ class PipelineExit(Exception):
             raise PipelineExit(UnauthorizedFrame(...))
     """
 
-    def __init__(self, exit_frame: "Frame"):
+    def __init__(self, exit_frame: Frame):
         self.exit_frame = exit_frame
         super().__init__(f"Pipeline exit with {exit_frame.frame_type}")
 
@@ -106,9 +106,9 @@ class RoutingDecision:
 
 
 def record_decision(
-    ctx: "PipelineContext",
+    ctx: PipelineContext,
     router_name: str,
-    frame: "Frame",
+    frame: Frame,
     selected_branch: str,
     *,
     condition: str | None = None,
@@ -117,7 +117,7 @@ def record_decision(
 ) -> None:
     """Helper to record routing decisions in context."""
     decision = RoutingDecision(
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         router_name=router_name,
         frame_id=frame.id,
         frame_type=frame.frame_type,
@@ -153,9 +153,9 @@ class Executable(Protocol):
 
     async def execute(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | Sequence[Frame] | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | Sequence[Frame] | None:
         """Execute on a frame and return result."""
         ...
 
@@ -179,8 +179,8 @@ KeyExtractor = Callable[["Frame", "PipelineContext"], str]
 
 async def evaluate_condition(
     condition: Condition,
-    frame: "Frame",
-    ctx: "PipelineContext",
+    frame: Frame,
+    ctx: PipelineContext,
 ) -> bool:
     """Evaluate a condition, handling both sync and async."""
     result = condition(frame, ctx)
@@ -210,9 +210,9 @@ class Router(ABC):
     async def _execute_branch(
         self,
         branch: Executable,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | Sequence[Frame] | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | Sequence[Frame] | None:
         """Execute a branch, handling both Processor and Pipeline."""
         # Check for Pipeline (has execute method that takes initial_frame)
         if hasattr(branch, "execute") and hasattr(branch, "processors"):
@@ -269,9 +269,9 @@ class Conditional(Router):
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | Sequence[Frame] | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | Sequence[Frame] | None:
         result = await evaluate_condition(self.condition, frame, ctx)
 
         # Record decision
@@ -331,9 +331,9 @@ class Switch(Router):
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | Sequence[Frame] | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | Sequence[Frame] | None:
         key_value = self.key(frame, ctx)
 
         # Record decision
@@ -396,14 +396,14 @@ class TypeRouter(Router):
 
     @property
     def name(self) -> str:
-        type_names = [t.__name__ for t in self.routes.keys()]
+        type_names = [t.__name__ for t in self.routes]
         return f"TypeRouter({', '.join(type_names)})"
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | Sequence[Frame] | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | Sequence[Frame] | None:
         frame_type = type(frame)
 
         # Find matching branch (check exact type first, then bases)
@@ -429,7 +429,7 @@ class TypeRouter(Router):
             frame=frame,
             selected_branch=selected_type,
             condition=f"type = {frame_type.__name__}",
-            all_branches=tuple(t.__name__ for t in self.routes.keys())
+            all_branches=tuple(t.__name__ for t in self.routes)
             + (("default",) if self.default else ()),
         )
 
@@ -478,7 +478,7 @@ class Filter(Router):
     """
 
     condition: Condition
-    on_reject: "Frame | None" = None
+    on_reject: Frame | None = None
     condition_name: str = "filter"
 
     @property
@@ -487,9 +487,9 @@ class Filter(Router):
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | Sequence[Frame] | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | Sequence[Frame] | None:
         result = await evaluate_condition(self.condition, frame, ctx)
 
         selected = "pass" if result else "reject"
@@ -535,7 +535,7 @@ class Guard(Router):
     """
 
     condition: Condition
-    exit_frame: "Frame"
+    exit_frame: Frame
     condition_name: str = "guard"
 
     @property
@@ -544,9 +544,9 @@ class Guard(Router):
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | Sequence[Frame] | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | Sequence[Frame] | None:
         result = await evaluate_condition(self.condition, frame, ctx)
 
         if result:
@@ -627,15 +627,13 @@ class FanOut(Router):
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | Sequence[Frame] | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | Sequence[Frame] | None:
         if not self.branches:
             return frame  # No branches, passthrough
 
-        branch_names = [
-            getattr(b, "name", b.__class__.__name__) for b in self.branches
-        ]
+        branch_names = [getattr(b, "name", b.__class__.__name__) for b in self.branches]
 
         record_decision(
             ctx=ctx,
@@ -658,7 +656,7 @@ class FanOut(Router):
 
         try:
             return await self._gather_results(tasks, branch_names)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Cancel remaining tasks on timeout
             for task in tasks:
                 if not task.done():
@@ -673,7 +671,7 @@ class FanOut(Router):
         self,
         tasks: list[asyncio.Task[Any]],
         branch_names: list[str],
-    ) -> "Frame | Sequence[Frame] | None":
+    ) -> Frame | Sequence[Frame] | None:
         """Gather results based on strategy."""
         if self.strategy == FanOutStrategy.ALL:
             return await self._strategy_all(tasks)
@@ -689,7 +687,7 @@ class FanOut(Router):
     async def _strategy_all(
         self,
         tasks: list[asyncio.Task[Any]],
-    ) -> "Sequence[Frame]":
+    ) -> Sequence[Frame]:
         """Wait for all, fail if any fails."""
         if self.timeout:
             results = await asyncio.wait_for(
@@ -705,7 +703,7 @@ class FanOut(Router):
     async def _strategy_all_settled(
         self,
         tasks: list[asyncio.Task[Any]],
-    ) -> "Sequence[Frame]":
+    ) -> Sequence[Frame]:
         """Wait for all, collect successes and failures."""
         if self.timeout:
             done, pending = await asyncio.wait(
@@ -724,7 +722,7 @@ class FanOut(Router):
             try:
                 result = task.result()
                 if result is not None:
-                    if isinstance(result, (list, tuple)):
+                    if isinstance(result, list | tuple):
                         results.extend(result)
                     else:
                         results.append(result)
@@ -738,7 +736,7 @@ class FanOut(Router):
         self,
         tasks: list[asyncio.Task[Any]],
         branch_names: list[str],
-    ) -> "Frame | Sequence[Frame] | None":
+    ) -> Frame | Sequence[Frame] | None:
         """Return first successful result."""
         pending = set(tasks)
         errors: list[Exception] = []
@@ -776,7 +774,7 @@ class FanOut(Router):
     async def _strategy_race(
         self,
         tasks: list[asyncio.Task[Any]],
-    ) -> "Frame | Sequence[Frame] | None":
+    ) -> Frame | Sequence[Frame] | None:
         """Return first completed result (success or failure)."""
         if self.timeout:
             done, pending = await asyncio.wait(
@@ -803,13 +801,13 @@ class FanOut(Router):
     def _flatten_results(
         self,
         results: list[Any],
-    ) -> list["Frame"]:
+    ) -> list[Frame]:
         """Flatten nested results into list of frames."""
         flattened: list[Frame] = []
         for result in results:
             if result is None:
                 continue
-            elif isinstance(result, (list, tuple)):
+            elif isinstance(result, list | tuple):
                 flattened.extend(result)
             else:
                 flattened.append(result)
@@ -821,27 +819,27 @@ class FanOut(Router):
 # =============================================================================
 
 __all__ = [
-    # Exceptions
-    "RoutingError",
-    "PipelineExit",
-    # Decision tracking
-    "RoutingDecision",
-    "record_decision",
-    # Protocol
-    "Executable",
+    "AsyncCondition",
     # Condition types
     "Condition",
-    "SyncCondition",
-    "AsyncCondition",
-    "KeyExtractor",
-    "evaluate_condition",
-    # Routers
-    "Router",
     "Conditional",
-    "Switch",
-    "TypeRouter",
-    "Filter",
-    "Guard",
+    # Protocol
+    "Executable",
     "FanOut",
     "FanOutStrategy",
+    "Filter",
+    "Guard",
+    "KeyExtractor",
+    "PipelineExit",
+    # Routers
+    "Router",
+    # Decision tracking
+    "RoutingDecision",
+    # Exceptions
+    "RoutingError",
+    "Switch",
+    "SyncCondition",
+    "TypeRouter",
+    "evaluate_condition",
+    "record_decision",
 ]

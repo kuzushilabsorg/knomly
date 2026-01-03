@@ -21,13 +21,14 @@ Usage:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from knomly.adapters.schemas import PipelinePacket
     from knomly.adapters.base import ToolBuilder
+    from knomly.adapters.schemas import PipelinePacket
     from knomly.adapters.service_factory import GenericServiceFactory
     from knomly.pipeline import Pipeline
+    from knomly.providers.registry import ProviderRegistry
     from knomly.tools.base import Tool
 
 logger = logging.getLogger(__name__)
@@ -57,8 +58,8 @@ class RuntimeBuilder:
     def __init__(
         self,
         *,
-        service_factory: "GenericServiceFactory | None" = None,
-        tool_builder: "ToolBuilder | None" = None,
+        service_factory: GenericServiceFactory | None = None,
+        tool_builder: ToolBuilder | None = None,
     ):
         """
         Initialize builder.
@@ -72,11 +73,11 @@ class RuntimeBuilder:
 
     async def build(
         self,
-        packet: "PipelinePacket",
+        packet: PipelinePacket,
         secrets: dict[str, str],
         *,
-        extra_tools: list["Tool"] | None = None,
-    ) -> "Pipeline":
+        extra_tools: list[Tool] | None = None,
+    ) -> Pipeline:
         """
         Build a live Pipeline from a PipelinePacket.
 
@@ -89,8 +90,6 @@ class RuntimeBuilder:
             Executable Pipeline instance
         """
         from knomly.pipeline import PipelineBuilder, PipelineContext
-        from knomly.providers import ProviderRegistry
-        from knomly.tools.factory import ToolContext
 
         logger.info(
             f"[runtime_builder] Building pipeline | "
@@ -124,18 +123,16 @@ class RuntimeBuilder:
         builder = PipelineBuilder(context=context)
 
         logger.info(
-            f"[runtime_builder] Pipeline built | "
-            f"providers={providers} | "
-            f"tools={len(tools)}"
+            f"[runtime_builder] Pipeline built | " f"providers={providers} | " f"tools={len(tools)}"
         )
 
         return builder.build()
 
     async def build_tools_only(
         self,
-        packet: "PipelinePacket",
+        packet: PipelinePacket,
         secrets: dict[str, str],
-    ) -> list["Tool"]:
+    ) -> list[Tool]:
         """
         Build just the tools from a packet.
 
@@ -152,9 +149,9 @@ class RuntimeBuilder:
 
     async def build_providers_only(
         self,
-        packet: "PipelinePacket",
+        packet: PipelinePacket,
         secrets: dict[str, str],
-    ) -> "ProviderRegistry":
+    ) -> ProviderRegistry:
         """
         Build just the providers from a packet.
 
@@ -171,9 +168,9 @@ class RuntimeBuilder:
 
     async def _build_providers(
         self,
-        packet: "PipelinePacket",
+        packet: PipelinePacket,
         secrets: dict[str, str],
-    ) -> "ProviderRegistry":
+    ) -> ProviderRegistry:
         """Build provider registry from packet configuration."""
         from knomly.providers import ProviderRegistry
 
@@ -188,36 +185,44 @@ class RuntimeBuilder:
             stt = self._service_factory.create_service(packet.providers.stt, secrets)
             if stt:
                 providers.register_stt(packet.providers.stt.provider_code, stt)
-                logger.debug(f"[runtime_builder] Registered STT: {packet.providers.stt.provider_code}")
+                logger.debug(
+                    f"[runtime_builder] Registered STT: {packet.providers.stt.provider_code}"
+                )
 
         # LLM Provider
         if packet.providers.llm:
             llm = self._service_factory.create_service(packet.providers.llm, secrets)
             if llm:
                 providers.register_llm(packet.providers.llm.provider_code, llm)
-                logger.debug(f"[runtime_builder] Registered LLM: {packet.providers.llm.provider_code}")
+                logger.debug(
+                    f"[runtime_builder] Registered LLM: {packet.providers.llm.provider_code}"
+                )
 
         # TTS Provider
         if packet.providers.tts:
             tts = self._service_factory.create_service(packet.providers.tts, secrets)
             if tts:
                 providers.register_tts(packet.providers.tts.provider_code, tts)
-                logger.debug(f"[runtime_builder] Registered TTS: {packet.providers.tts.provider_code}")
+                logger.debug(
+                    f"[runtime_builder] Registered TTS: {packet.providers.tts.provider_code}"
+                )
 
         # Chat Provider
         if packet.providers.chat:
             chat = self._service_factory.create_service(packet.providers.chat, secrets)
             if chat:
                 providers.register_chat(packet.providers.chat.provider_code, chat)
-                logger.debug(f"[runtime_builder] Registered Chat: {packet.providers.chat.provider_code}")
+                logger.debug(
+                    f"[runtime_builder] Registered Chat: {packet.providers.chat.provider_code}"
+                )
 
         return providers
 
     async def _build_tools(
         self,
-        packet: "PipelinePacket",
+        packet: PipelinePacket,
         secrets: dict[str, str],
-    ) -> list["Tool"]:
+    ) -> list[Tool]:
         """Build tools from packet configuration."""
         from knomly.tools.factory import ToolContext
 
@@ -237,5 +242,7 @@ class RuntimeBuilder:
         enabled_tools = packet.get_enabled_tools()
         tools = await self._tool_builder.build_tools(enabled_tools, tool_context)
 
-        logger.info(f"[runtime_builder] Built {len(tools)} tools from {len(enabled_tools)} definitions")
+        logger.info(
+            f"[runtime_builder] Built {len(tools)} tools from {len(enabled_tools)} definitions"
+        )
         return tools

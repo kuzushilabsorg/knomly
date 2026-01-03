@@ -3,11 +3,12 @@ Gemini LLM Provider for Knomly.
 
 Uses Google's Gemini models for text generation.
 """
+
 from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .base import BaseLLMProvider, LLMConfig, LLMResponse, Message, MessageRole
 
@@ -47,7 +48,7 @@ class GeminiLLMProvider(BaseLLMProvider):
         self,
         api_key: str,
         model: str = "gemini-2.0-flash-exp",
-        safety_settings: Optional[List[Dict[str, str]]] = None,
+        safety_settings: list[dict[str, str]] | None = None,
     ):
         """
         Initialize Gemini LLM provider.
@@ -61,7 +62,7 @@ class GeminiLLMProvider(BaseLLMProvider):
         self._api_key = api_key
         self._safety_settings = safety_settings or self.DEFAULT_SAFETY_SETTINGS
         self._genai = None  # Lazy initialization
-        self._model_cache: Dict[str, Any] = {}
+        self._model_cache: dict[str, Any] = {}
 
     @property
     def name(self) -> str:
@@ -85,7 +86,7 @@ class GeminiLLMProvider(BaseLLMProvider):
     def _get_model(
         self,
         model_name: str,
-        system_instruction: Optional[str] = None,
+        system_instruction: str | None = None,
         json_mode: bool = False,
     ):
         """Get or create a Gemini model instance."""
@@ -118,9 +119,7 @@ class GeminiLLMProvider(BaseLLMProvider):
 
         return self._model_cache[cache_key]
 
-    def _convert_messages(
-        self, messages: List[Message]
-    ) -> tuple[str, List[Dict[str, Any]]]:
+    def _convert_messages(self, messages: list[Message]) -> tuple[str, list[dict[str, Any]]]:
         """
         Convert Message objects to Gemini format.
 
@@ -142,19 +141,23 @@ class GeminiLLMProvider(BaseLLMProvider):
                     system_instruction += "\n\n"
                 system_instruction += msg.content
             elif msg.role == MessageRole.USER:
-                conversation.append({
-                    "role": "user",
-                    "parts": [msg.content],
-                })
+                conversation.append(
+                    {
+                        "role": "user",
+                        "parts": [msg.content],
+                    }
+                )
             elif msg.role == MessageRole.ASSISTANT:
-                conversation.append({
-                    "role": "model",
-                    "parts": [msg.content],
-                })
+                conversation.append(
+                    {
+                        "role": "model",
+                        "parts": [msg.content],
+                    }
+                )
 
         return system_instruction, conversation
 
-    def _extract_usage(self, response: Any) -> Dict[str, int]:
+    def _extract_usage(self, response: Any) -> dict[str, int]:
         """Extract token usage from Gemini response."""
         usage = {}
         try:
@@ -191,8 +194,8 @@ class GeminiLLMProvider(BaseLLMProvider):
 
     async def complete(
         self,
-        messages: List[Message],
-        config: Optional[LLMConfig] = None,
+        messages: list[Message],
+        config: LLMConfig | None = None,
     ) -> LLMResponse:
         """
         Generate a completion using Gemini.
@@ -267,9 +270,9 @@ class GeminiLLMProvider(BaseLLMProvider):
 
     async def complete_json(
         self,
-        messages: List[Message],
-        config: Optional[LLMConfig] = None,
-    ) -> Dict[str, Any]:
+        messages: list[Message],
+        config: LLMConfig | None = None,
+    ) -> dict[str, Any]:
         """
         Generate a JSON completion using Gemini.
 
@@ -299,7 +302,7 @@ class GeminiLLMProvider(BaseLLMProvider):
 
         return json.loads(content.strip())
 
-    async def count_tokens(self, messages: List[Message]) -> int:
+    async def count_tokens(self, messages: list[Message]) -> int:
         """
         Count tokens for a list of messages.
 
@@ -356,7 +359,7 @@ class GeminiProProvider(GeminiLLMProvider):
 
 
 __all__ = [
-    "GeminiLLMProvider",
     "GeminiFlashProvider",
+    "GeminiLLMProvider",
     "GeminiProProvider",
 ]

@@ -1,9 +1,11 @@
 """
 Pytest configuration and fixtures for Knomly tests.
 """
-import pytest
+
 import sys
 from pathlib import Path
+
+import pytest
 
 # Add the repository root to path for imports
 # This allows `from knomly.pipeline import ...` to work

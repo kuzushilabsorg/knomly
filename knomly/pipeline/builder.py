@@ -19,6 +19,7 @@ Architecture (v1.5 + v2 Agent Layer):
                                                           |
                                                     Confirmation
 """
+
 from __future__ import annotations
 
 import logging
@@ -26,7 +27,6 @@ from typing import TYPE_CHECKING
 
 from .executor import Pipeline, PipelineBuilder
 from .processor import Processor
-from .routing import Switch
 from .processors import (
     AgentBridgeProcessor,
     AudioDownloadProcessor,
@@ -40,12 +40,14 @@ from .processors import (
     create_task_agent_bridge,
     get_intent,
 )
+from .routing import Switch
 
 if TYPE_CHECKING:
     from knomly.config.schemas import AppSettings
     from knomly.integrations.plane import PlaneClient
     from knomly.integrations.plane.cache import PlaneEntityCache
     from knomly.providers.llm import LLMProvider
+
     from .context import PipelineContext
     from .frames import Frame
 
@@ -75,18 +77,16 @@ class UnknownIntentProcessor(Processor):
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | None:
         from .frames import UserResponseFrame
 
         # Extract intent info from metadata
         intent = frame.metadata.get("intent", "unknown")
         confidence = frame.metadata.get("intent_confidence", 0.0)
 
-        logger.info(
-            f"Unknown intent handler: intent={intent}, confidence={confidence:.2f}"
-        )
+        logger.info(f"Unknown intent handler: intent={intent}, confidence={confidence:.2f}")
 
         # Return a generic UserResponseFrame (not Zulip-specific)
         # ConfirmationProcessor will send this back via the appropriate channel
@@ -136,11 +136,11 @@ class PipelineFactory:
 
     def __init__(
         self,
-        settings: "AppSettings",
+        settings: AppSettings,
         *,
-        plane_client: "PlaneClient | None" = None,
-        plane_cache: "PlaneEntityCache | None" = None,
-        llm_provider: "LLMProvider | None" = None,
+        plane_client: PlaneClient | None = None,
+        plane_cache: PlaneEntityCache | None = None,
+        llm_provider: LLMProvider | None = None,
     ):
         """
         Initialize pipeline factory with settings.
@@ -266,12 +266,7 @@ class PipelineFactory:
 
     def _create_standup_branch(self) -> Pipeline:
         """Create the standup processing branch."""
-        return (
-            PipelineBuilder()
-            .add(ExtractionProcessor())
-            .add(ZulipProcessor())
-            .build()
-        )
+        return PipelineBuilder().add(ExtractionProcessor()).add(ZulipProcessor()).build()
 
     def create_standup_pipeline(self) -> Pipeline:
         """
@@ -344,11 +339,11 @@ class PipelineFactory:
 
 
 def create_voice_pipeline(
-    settings: "AppSettings",
+    settings: AppSettings,
     *,
-    plane_client: "PlaneClient | None" = None,
-    plane_cache: "PlaneEntityCache | None" = None,
-    llm_provider: "LLMProvider | None" = None,
+    plane_client: PlaneClient | None = None,
+    plane_cache: PlaneEntityCache | None = None,
+    llm_provider: LLMProvider | None = None,
 ) -> Pipeline:
     """
     Create the main voice message pipeline with intent routing.
@@ -377,7 +372,7 @@ def create_voice_pipeline(
     return factory.create_voice_pipeline()
 
 
-def create_standup_pipeline(settings: "AppSettings") -> Pipeline:
+def create_standup_pipeline(settings: AppSettings) -> Pipeline:
     """
     Create a simple linear standup pipeline (legacy).
 
@@ -394,11 +389,11 @@ def create_standup_pipeline(settings: "AppSettings") -> Pipeline:
 
 
 def create_default_pipeline(
-    settings: "AppSettings",
+    settings: AppSettings,
     *,
-    plane_client: "PlaneClient | None" = None,
-    plane_cache: "PlaneEntityCache | None" = None,
-    llm_provider: "LLMProvider | None" = None,
+    plane_client: PlaneClient | None = None,
+    plane_cache: PlaneEntityCache | None = None,
+    llm_provider: LLMProvider | None = None,
 ) -> Pipeline:
     """
     Create the default pipeline for voice message processing.

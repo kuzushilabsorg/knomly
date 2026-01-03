@@ -36,12 +36,15 @@ Usage:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Protocol, Sequence, TypeVar, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, runtime_checkable
 
 if TYPE_CHECKING:
-    from .schemas import ToolDefinition, ProviderDefinition, PipelinePacket
+    from collections.abc import Sequence
+
     from knomly.tools.base import Tool
     from knomly.tools.factory import ToolContext
+
+    from .schemas import PipelinePacket, ProviderDefinition, ToolDefinition
 
 
 T = TypeVar("T")
@@ -84,9 +87,9 @@ class ToolAdapter(Protocol):
 
     async def build_tool(
         self,
-        definition: "ToolDefinition",
-        context: "ToolContext",
-    ) -> "Tool":
+        definition: ToolDefinition,
+        context: ToolContext,
+    ) -> Tool:
         """
         Build a live Tool from a definition.
 
@@ -136,17 +139,17 @@ class BaseToolAdapter(ABC):
     @abstractmethod
     async def build_tool(
         self,
-        definition: "ToolDefinition",
-        context: "ToolContext",
-    ) -> "Tool":
+        definition: ToolDefinition,
+        context: ToolContext,
+    ) -> Tool:
         """Build a live Tool from a definition."""
         ...
 
     async def build_tools(
         self,
-        definitions: Sequence["ToolDefinition"],
-        context: "ToolContext",
-    ) -> list["Tool"]:
+        definitions: Sequence[ToolDefinition],
+        context: ToolContext,
+    ) -> list[Tool]:
         """
         Build multiple tools from definitions.
 
@@ -193,7 +196,7 @@ class ServiceFactory(Protocol[T]):
 
     def create_service(
         self,
-        definition: "ProviderDefinition",
+        definition: ProviderDefinition,
         secrets: dict[str, str] | None = None,
         **kwargs: Any,
     ) -> T | None:
@@ -370,7 +373,7 @@ class DefinitionLoader(Protocol):
     async def get_tools_for_user(
         self,
         user_id: str,
-    ) -> list["ToolDefinition"]:
+    ) -> list[ToolDefinition]:
         """
         Get tool definitions available to a user.
 
@@ -387,7 +390,7 @@ class DefinitionLoader(Protocol):
         session_id: str,
         user_id: str,
         **context: Any,
-    ) -> "PipelinePacket | None":
+    ) -> PipelinePacket | None:
         """
         Get pipeline configuration for a session.
 
@@ -406,7 +409,7 @@ class DefinitionLoader(Protocol):
         provider_type: str,
         provider_code: str,
         user_id: str | None = None,
-    ) -> "ProviderDefinition | None":
+    ) -> ProviderDefinition | None:
         """
         Get provider definition.
 
@@ -467,9 +470,9 @@ class ToolBuilder:
 
     async def build_tool(
         self,
-        definition: "ToolDefinition",
-        context: "ToolContext",
-    ) -> "Tool | None":
+        definition: ToolDefinition,
+        context: ToolContext,
+    ) -> Tool | None:
         """
         Build a single tool from definition.
 
@@ -487,9 +490,9 @@ class ToolBuilder:
 
     async def build_tools(
         self,
-        definitions: Sequence["ToolDefinition"],
-        context: "ToolContext",
-    ) -> list["Tool"]:
+        definitions: Sequence[ToolDefinition],
+        context: ToolContext,
+    ) -> list[Tool]:
         """
         Build multiple tools from definitions.
 
@@ -512,8 +515,8 @@ class ToolBuilder:
     async def build_tools_for_user(
         self,
         user_id: str,
-        context: "ToolContext",
-    ) -> list["Tool"]:
+        context: ToolContext,
+    ) -> list[Tool]:
         """
         Build all tools available to a user.
 

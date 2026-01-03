@@ -6,10 +6,9 @@ AudioInputFrame -> Download -> Transcription -> Intent -> Routing -> Extraction 
 
 Run with: python -m pytest tests/e2e_manual_test.py -v -s
 """
+
 import asyncio
 import logging
-from dataclasses import dataclass
-from typing import List, Optional
 
 import pytest
 
@@ -17,7 +16,7 @@ import pytest
 logging.basicConfig(level=logging.INFO, format="%(name)s | %(message)s")
 
 # Framework imports
-from knomly.pipeline import Pipeline, PipelineBuilder, PipelineContext, Switch
+from knomly.pipeline import PipelineBuilder, PipelineContext, Switch
 from knomly.pipeline.frames import (
     AudioInputFrame,
     ConfirmationFrame,
@@ -26,17 +25,16 @@ from knomly.pipeline.frames import (
     TranscriptionFrame,
     ZulipMessageFrame,
 )
+from knomly.pipeline.processor import Processor
 from knomly.pipeline.processors import (
     Intent,
     IntentClassifierProcessor,
     get_intent,
 )
-from knomly.pipeline.processor import Processor
-from knomly.providers.registry import ProviderRegistry
-from knomly.providers.llm.base import LLMResponse, Message, LLMConfig
-from knomly.providers.stt.base import TranscriptionResult
 from knomly.providers.chat.base import MessageResult
-
+from knomly.providers.llm.base import LLMConfig, LLMResponse, Message
+from knomly.providers.registry import ProviderRegistry
+from knomly.providers.stt.base import TranscriptionResult
 
 # =============================================================================
 # Mock Providers
@@ -46,7 +44,9 @@ from knomly.providers.chat.base import MessageResult
 class MockSTTProvider:
     """Mock STT that returns predefined transcription."""
 
-    def __init__(self, transcription: str = "Today I'm working on the pipeline framework. No blockers."):
+    def __init__(
+        self, transcription: str = "Today I'm working on the pipeline framework. No blockers."
+    ):
         self._transcription = transcription
 
     @property
@@ -57,7 +57,7 @@ class MockSTTProvider:
         self,
         audio_bytes: bytes,
         mime_type: str = "audio/ogg",
-        language_hint: Optional[str] = None,
+        language_hint: str | None = None,
     ) -> TranscriptionResult:
         print(f"  [MockSTT] Transcribing {len(audio_bytes)} bytes...")
         return TranscriptionResult(
@@ -79,8 +79,8 @@ class MockLLMProvider:
 
     async def complete(
         self,
-        messages: List[Message],
-        config: Optional[LLMConfig] = None,
+        messages: list[Message],
+        config: LLMConfig | None = None,
     ) -> LLMResponse:
         prompt = messages[-1].content if messages else ""
 
@@ -97,12 +97,12 @@ class MockLLMProvider:
         if "standup" in prompt.lower() or "extract" in prompt.lower():
             print("  [MockLLM] Extracting standup...")
             return LLMResponse(
-                content='''{
+                content="""{
                     "today_items": ["Working on pipeline framework", "Writing tests"],
                     "yesterday_items": ["Reviewed architecture"],
                     "blockers": [],
                     "summary": "Making good progress on Knomly"
-                }''',
+                }""",
                 model="mock-model",
                 provider=self.name,
             )
@@ -118,7 +118,7 @@ class MockChatProvider:
     """Mock Chat provider that records messages sent."""
 
     def __init__(self):
-        self.sent_messages: List[dict] = []
+        self.sent_messages: list[dict] = []
 
     @property
     def name(self) -> str:
@@ -131,11 +131,13 @@ class MockChatProvider:
         content: str,
     ) -> MessageResult:
         print(f"  [MockChat] Sending to {stream}/{topic}...")
-        self.sent_messages.append({
-            "stream": stream,
-            "topic": topic,
-            "content": content,
-        })
+        self.sent_messages.append(
+            {
+                "stream": stream,
+                "topic": topic,
+                "content": content,
+            }
+        )
         return MessageResult(
             success=True,
             message_id=12345,
@@ -212,11 +214,10 @@ class MockExtractionProcessor(Processor):
             return frame
 
         llm = ctx.providers.get_llm()
-        response = await llm.complete([
-            Message.user(f"Extract standup from: {frame.text}")
-        ])
+        response = await llm.complete([Message.user(f"Extract standup from: {frame.text}")])
 
         import json
+
         data = json.loads(response.content)
 
         print(f"  [{self.name}] Extracted: {data.get('today_items', [])}")
@@ -358,10 +359,7 @@ class TestE2EPipeline:
         """Create pipeline with intent routing."""
         # Build standup branch
         standup_branch = (
-            PipelineBuilder()
-            .add(MockExtractionProcessor())
-            .add(MockZulipProcessor())
-            .build()
+            PipelineBuilder().add(MockExtractionProcessor()).add(MockZulipProcessor()).build()
         )
 
         # Build main pipeline
@@ -370,14 +368,16 @@ class TestE2EPipeline:
             .add(MockAudioDownloadProcessor())
             .add(MockTranscriptionProcessor())
             .add(IntentClassifierProcessor())
-            .add(Switch(
-                key=get_intent,
-                cases={
-                    Intent.STANDUP.value: standup_branch,
-                },
-                default=UnknownIntentProcessor(),
-                key_name="intent",
-            ))
+            .add(
+                Switch(
+                    key=get_intent,
+                    cases={
+                        Intent.STANDUP.value: standup_branch,
+                    },
+                    default=UnknownIntentProcessor(),
+                    key_name="intent",
+                )
+            )
             .add(MockConfirmationProcessor())
             .build()
         )
@@ -385,9 +385,9 @@ class TestE2EPipeline:
     @pytest.mark.asyncio
     async def test_full_standup_flow(self, pipeline_with_routing, mock_providers):
         """Test complete flow: Audio -> Transcription -> Intent -> Extraction -> Zulip -> Confirmation."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("E2E TEST: Full Standup Flow with Intent Routing")
-        print("="*60)
+        print("=" * 60)
 
         # Create input frame
         input_frame = AudioInputFrame(
@@ -433,26 +433,27 @@ class TestE2EPipeline:
         # Check routing decision
         assert len(ctx.routing_decisions) > 0, "No routing decisions recorded"
         intent_decision = next(
-            (d for d in ctx.routing_decisions if "intent" in d.router_name.lower()),
-            None
+            (d for d in ctx.routing_decisions if "intent" in d.router_name.lower()), None
         )
         assert intent_decision is not None, "No intent routing decision"
-        assert intent_decision.selected_branch == "standup", f"Wrong branch: {intent_decision.selected_branch}"
+        assert (
+            intent_decision.selected_branch == "standup"
+        ), f"Wrong branch: {intent_decision.selected_branch}"
 
         print("\n✅ E2E Test PASSED")
 
     @pytest.mark.asyncio
     async def test_unknown_intent_flow(self, mock_providers):
         """Test flow when intent is unknown."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("E2E TEST: Unknown Intent Flow")
-        print("="*60)
+        print("=" * 60)
 
         # Create STT that returns something non-standup-like
         mock_providers.unregister_stt("mock")
         mock_providers.register_stt(
             "mock",
-            MockSTTProvider("What time is dinner?")  # Not a standup
+            MockSTTProvider("What time is dinner?"),  # Not a standup
         )
 
         # Modify LLM to return unknown intent
@@ -473,10 +474,7 @@ class TestE2EPipeline:
 
         # Build pipeline (without standup branch for query intent)
         standup_branch = (
-            PipelineBuilder()
-            .add(MockExtractionProcessor())
-            .add(MockZulipProcessor())
-            .build()
+            PipelineBuilder().add(MockExtractionProcessor()).add(MockZulipProcessor()).build()
         )
 
         pipeline = (
@@ -484,14 +482,16 @@ class TestE2EPipeline:
             .add(MockAudioDownloadProcessor())
             .add(MockTranscriptionProcessor())
             .add(IntentClassifierProcessor())
-            .add(Switch(
-                key=get_intent,
-                cases={
-                    Intent.STANDUP.value: standup_branch,
-                },
-                default=UnknownIntentProcessor(),
-                key_name="intent",
-            ))
+            .add(
+                Switch(
+                    key=get_intent,
+                    cases={
+                        Intent.STANDUP.value: standup_branch,
+                    },
+                    default=UnknownIntentProcessor(),
+                    key_name="intent",
+                )
+            )
             .add(MockConfirmationProcessor())
             .build()
         )
@@ -511,7 +511,7 @@ class TestE2EPipeline:
             zulip_topic="test-user-updates",
         )
 
-        print(f"\nInput: Voice note saying 'What time is dinner?'")
+        print("\nInput: Voice note saying 'What time is dinner?'")
         print("\nPipeline Execution:")
         print("-" * 40)
 
@@ -524,20 +524,21 @@ class TestE2EPipeline:
         # Should route to default (unknown handler)
         assert result.success
         intent_decision = next(
-            (d for d in ctx.routing_decisions if "intent" in d.router_name.lower()),
-            None
+            (d for d in ctx.routing_decisions if "intent" in d.router_name.lower()), None
         )
         assert intent_decision is not None
-        assert intent_decision.selected_branch == "default", f"Should route to default, got: {intent_decision.selected_branch}"
+        assert (
+            intent_decision.selected_branch == "default"
+        ), f"Should route to default, got: {intent_decision.selected_branch}"
 
         print("\n✅ Unknown Intent Test PASSED")
 
     @pytest.mark.asyncio
     async def test_pipeline_error_handling(self, mock_providers):
         """Test that errors are handled gracefully."""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("E2E TEST: Error Handling")
-        print("="*60)
+        print("=" * 60)
 
         class FailingProcessor(Processor):
             @property
@@ -574,6 +575,7 @@ class TestE2EPipeline:
 
         # Pipeline should handle error gracefully
         from knomly.pipeline.frames import ErrorFrame
+
         error_frame = result.get_frame(ErrorFrame)
 
         if error_frame:
@@ -591,9 +593,9 @@ class TestE2EPipeline:
 # =============================================================================
 
 if __name__ == "__main__":
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("KNOMLY END-TO-END MANUAL TEST")
-    print("="*60)
+    print("=" * 60)
 
     async def run_tests():
         test = TestE2EPipeline()
@@ -604,10 +606,7 @@ if __name__ == "__main__":
 
         # Build pipeline
         standup_branch = (
-            PipelineBuilder()
-            .add(MockExtractionProcessor())
-            .add(MockZulipProcessor())
-            .build()
+            PipelineBuilder().add(MockExtractionProcessor()).add(MockZulipProcessor()).build()
         )
 
         pipeline = (
@@ -615,14 +614,16 @@ if __name__ == "__main__":
             .add(MockAudioDownloadProcessor())
             .add(MockTranscriptionProcessor())
             .add(IntentClassifierProcessor())
-            .add(Switch(
-                key=get_intent,
-                cases={
-                    Intent.STANDUP.value: standup_branch,
-                },
-                default=UnknownIntentProcessor(),
-                key_name="intent",
-            ))
+            .add(
+                Switch(
+                    key=get_intent,
+                    cases={
+                        Intent.STANDUP.value: standup_branch,
+                    },
+                    default=UnknownIntentProcessor(),
+                    key_name="intent",
+                )
+            )
             .add(MockConfirmationProcessor())
             .build()
         )

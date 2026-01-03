@@ -4,6 +4,7 @@ Transport Registry for Knomly.
 Global registry for managing transport adapters.
 Provides thread-safe singleton pattern for adapter lookup.
 """
+
 from __future__ import annotations
 
 import logging
@@ -46,9 +47,9 @@ class TransportRegistry:
     """
 
     def __init__(self) -> None:
-        self._adapters: dict[str, "TransportAdapter"] = {}
+        self._adapters: dict[str, TransportAdapter] = {}
 
-    def register(self, adapter: "TransportAdapter") -> None:
+    def register(self, adapter: TransportAdapter) -> None:
         """
         Register a transport adapter.
 
@@ -65,7 +66,7 @@ class TransportRegistry:
         self._adapters[channel_id] = adapter
         logger.info(f"Registered transport adapter: {channel_id}")
 
-    def get(self, channel_id: str) -> "TransportAdapter":
+    def get(self, channel_id: str) -> TransportAdapter:
         """
         Get a transport adapter by channel ID.
 
@@ -134,7 +135,7 @@ def get_transport_registry() -> TransportRegistry:
     return _registry
 
 
-def get_transport(channel_id: str) -> "TransportAdapter":
+def get_transport(channel_id: str) -> TransportAdapter:
     """
     Get a transport adapter from the global registry.
 
@@ -152,7 +153,7 @@ def get_transport(channel_id: str) -> "TransportAdapter":
     return get_transport_registry().get(channel_id)
 
 
-def register_transport(adapter: "TransportAdapter") -> None:
+def register_transport(adapter: TransportAdapter) -> None:
     """
     Register a transport adapter in the global registry.
 

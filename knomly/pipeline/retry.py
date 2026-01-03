@@ -14,6 +14,7 @@ Design Philosophy:
 
 See ADR-001 for design decisions.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -22,11 +23,12 @@ import random
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from .context import PipelineContext
     from .frames import Frame
 
@@ -348,18 +350,20 @@ async def with_retry(
             result = await operation()
 
             # Check if result should trigger retry
-            if policy.retry_on_result and policy.retry_on_result(result):
-                # For result-based retry, check attempt count directly
-                if attempt < policy.max_attempts:
-                    delay = policy.get_delay(attempt)
-                    total_delay += delay
-                    logger.warning(
-                        f"{operation_name}: Result triggered retry "
-                        f"(attempt {attempt}/{policy.max_attempts}), "
-                        f"waiting {delay:.2f}s"
-                    )
-                    await asyncio.sleep(delay)
-                    continue
+            if (
+                policy.retry_on_result
+                and policy.retry_on_result(result)
+                and attempt < policy.max_attempts
+            ):
+                delay = policy.get_delay(attempt)
+                total_delay += delay
+                logger.warning(
+                    f"{operation_name}: Result triggered retry "
+                    f"(attempt {attempt}/{policy.max_attempts}), "
+                    f"waiting {delay:.2f}s"
+                )
+                await asyncio.sleep(delay)
+                continue
 
             return RetryResult(
                 success=True,
@@ -383,8 +387,7 @@ async def with_retry(
                 await asyncio.sleep(delay)
             else:
                 logger.error(
-                    f"{operation_name}: Failed after {attempt} attempts, "
-                    f"last error: {e}"
+                    f"{operation_name}: Failed after {attempt} attempts, " f"last error: {e}"
                 )
                 return RetryResult(
                     success=False,
@@ -415,8 +418,7 @@ class CircuitOpenError(Exception):
         self.circuit_name = circuit_name
         self.reset_after = reset_after
         super().__init__(
-            f"Circuit '{circuit_name}' is open, "
-            f"will attempt reset in {reset_after:.1f}s"
+            f"Circuit '{circuit_name}' is open, " f"will attempt reset in {reset_after:.1f}s"
         )
 
 
@@ -459,9 +461,8 @@ class CircuitBreaker:
     @property
     def state(self) -> CircuitState:
         """Get current circuit state (may transition to half-open)."""
-        if self._state == CircuitState.OPEN:
-            if self._should_attempt_reset():
-                self._transition_to_half_open()
+        if self._state == CircuitState.OPEN and self._should_attempt_reset():
+            self._transition_to_half_open()
         return self._state
 
     @property
@@ -520,9 +521,8 @@ class CircuitBreaker:
         if self._state == CircuitState.HALF_OPEN:
             # Any failure in half-open reopens circuit
             self._transition_to_open()
-        elif self._state == CircuitState.CLOSED:
-            if self._failure_count >= self.failure_threshold:
-                self._transition_to_open()
+        elif self._state == CircuitState.CLOSED and self._failure_count >= self.failure_threshold:
+            self._transition_to_open()
 
     async def call(
         self,
@@ -541,9 +541,7 @@ class CircuitBreaker:
         state = self.state  # May transition to half-open
 
         if state == CircuitState.OPEN:
-            time_since_failure = (
-                time.monotonic() - (self._last_failure_time or 0)
-            )
+            time_since_failure = time.monotonic() - (self._last_failure_time or 0)
             reset_after = max(0, self.recovery_timeout - time_since_failure)
             raise CircuitOpenError(self.name, reset_after)
 
@@ -556,18 +554,16 @@ class CircuitBreaker:
             result = await operation()
             self.record_success()
             return result
-        except Exception as e:
+        except Exception:
             self.record_failure()
             raise
 
-    async def __aenter__(self) -> "CircuitBreaker":
+    async def __aenter__(self) -> CircuitBreaker:
         """Async context manager entry."""
         state = self.state
 
         if state == CircuitState.OPEN:
-            time_since_failure = (
-                time.monotonic() - (self._last_failure_time or 0)
-            )
+            time_since_failure = time.monotonic() - (self._last_failure_time or 0)
             reset_after = max(0, self.recovery_timeout - time_since_failure)
             raise CircuitOpenError(self.name, reset_after)
 
@@ -603,9 +599,7 @@ class CircuitBreaker:
             "failure_threshold": self.failure_threshold,
             "recovery_timeout": self.recovery_timeout,
             "time_since_last_failure": (
-                time.monotonic() - self._last_failure_time
-                if self._last_failure_time
-                else None
+                time.monotonic() - self._last_failure_time if self._last_failure_time else None
             ),
         }
 
@@ -638,7 +632,7 @@ class ResilientProcessor:
     retry_policy: RetryPolicy = field(default_factory=lambda: NO_RETRY)
     circuit_breaker: CircuitBreaker | None = None
     critical: bool = True  # If False, errors don't stop pipeline
-    fallback: Callable[["Frame", Exception], "Frame"] | None = None
+    fallback: Callable[[Frame, Exception], Frame] | None = None
 
     @property
     def name(self) -> str:
@@ -646,17 +640,14 @@ class ResilientProcessor:
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | None:
         """Process with retry and circuit breaker."""
-        from .frames import ErrorFrame
 
-        async def do_process() -> "Frame | None":
+        async def do_process() -> Frame | None:
             if self.circuit_breaker:
-                return await self.circuit_breaker.call(
-                    lambda: self.processor.process(frame, ctx)
-                )
+                return await self.circuit_breaker.call(lambda: self.processor.process(frame, ctx))
             return await self.processor.process(frame, ctx)
 
         try:
@@ -676,9 +667,7 @@ class ResilientProcessor:
                 raise RuntimeError("Retry failed without error")
 
         except CircuitOpenError as e:
-            logger.warning(
-                f"Circuit breaker open for {self.processor.name}: {e}"
-            )
+            logger.warning(f"Circuit breaker open for {self.processor.name}: {e}")
             if self.fallback:
                 return self.fallback(frame, e)
             if not self.critical:
@@ -690,8 +679,7 @@ class ResilientProcessor:
                 return self.fallback(frame, e)
             if not self.critical:
                 logger.warning(
-                    f"Non-critical processor {self.processor.name} failed, "
-                    f"continuing: {e}"
+                    f"Non-critical processor {self.processor.name} failed, " f"continuing: {e}"
                 )
                 return frame
             raise
@@ -702,26 +690,26 @@ class ResilientProcessor:
 # =============================================================================
 
 __all__ = [
-    # Backoff strategies
-    "BackoffStrategy",
-    "NoBackoff",
-    "ConstantBackoff",
-    "LinearBackoff",
-    "ExponentialBackoff",
-    "DecorrelatedJitter",
-    # Retry
-    "RetryPolicy",
-    "RetryResult",
-    "with_retry",
+    "AGGRESSIVE_RETRY",
     # Default policies
     "NO_RETRY",
     "RETRY_ONCE",
     "RETRY_WITH_BACKOFF",
-    "AGGRESSIVE_RETRY",
-    # Circuit breaker
-    "CircuitState",
+    # Backoff strategies
+    "BackoffStrategy",
     "CircuitBreaker",
     "CircuitOpenError",
+    # Circuit breaker
+    "CircuitState",
+    "ConstantBackoff",
+    "DecorrelatedJitter",
+    "ExponentialBackoff",
+    "LinearBackoff",
+    "NoBackoff",
     # Wrapper
     "ResilientProcessor",
+    # Retry
+    "RetryPolicy",
+    "RetryResult",
+    "with_retry",
 ]

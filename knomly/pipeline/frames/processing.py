@@ -3,9 +3,11 @@ Processing frames for Knomly pipeline.
 
 These frames represent intermediate processing results.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from datetime import UTC
 from typing import Any
 
 from .base import Frame
@@ -51,16 +53,22 @@ class TranscriptionFrame(Frame):
 
     def to_dict(self) -> dict[str, Any]:
         base = Frame.to_dict(self)
-        base.update({
-            "original_text": self.original_text[:200] + "..." if len(self.original_text) > 200 else self.original_text,
-            "english_text": self.english_text[:200] + "..." if len(self.english_text) > 200 else self.english_text,
-            "detected_language": self.detected_language,
-            "language_name": self.language_name,
-            "confidence": self.confidence,
-            "is_translated": self.is_translated,
-            "sender_phone": self.sender_phone,
-            "provider": self.provider,
-        })
+        base.update(
+            {
+                "original_text": self.original_text[:200] + "..."
+                if len(self.original_text) > 200
+                else self.original_text,
+                "english_text": self.english_text[:200] + "..."
+                if len(self.english_text) > 200
+                else self.english_text,
+                "detected_language": self.detected_language,
+                "language_name": self.language_name,
+                "confidence": self.confidence,
+                "is_translated": self.is_translated,
+                "sender_phone": self.sender_phone,
+                "provider": self.provider,
+            }
+        )
         return base
 
 
@@ -105,9 +113,9 @@ class ExtractionFrame(Frame):
 
         Returns a markdown-formatted message suitable for Zulip.
         """
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        date_str = datetime.now(timezone.utc).strftime("%B %d, %Y")
+        date_str = datetime.now(UTC).strftime("%B %d, %Y")
         lines = [f"**Morning Standup - {date_str}**", ""]
 
         if self.yesterday_items:
@@ -137,16 +145,18 @@ class ExtractionFrame(Frame):
 
     def to_dict(self) -> dict[str, Any]:
         base = Frame.to_dict(self)
-        base.update({
-            "today_items": list(self.today_items),
-            "yesterday_items": list(self.yesterday_items),
-            "blockers": list(self.blockers),
-            "summary": self.summary,
-            "user_name": self.user_name,
-            "zulip_stream": self.zulip_stream,
-            "zulip_topic": self.zulip_topic,
-            "sender_phone": self.sender_phone,
-            "has_blockers": self.has_blockers,
-            "has_items": self.has_items,
-        })
+        base.update(
+            {
+                "today_items": list(self.today_items),
+                "yesterday_items": list(self.yesterday_items),
+                "blockers": list(self.blockers),
+                "summary": self.summary,
+                "user_name": self.user_name,
+                "zulip_stream": self.zulip_stream,
+                "zulip_topic": self.zulip_topic,
+                "sender_phone": self.sender_phone,
+                "has_blockers": self.has_blockers,
+                "has_items": self.has_items,
+            }
+        )
         return base

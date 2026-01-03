@@ -6,10 +6,11 @@ Adapted from Pipecat patterns for HTTP request/response context.
 
 See ADR-001 for design decisions.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, TypeVar
 from uuid import UUID, uuid4
 
@@ -19,7 +20,7 @@ F = TypeVar("F", bound="Frame")
 
 def _utc_now() -> datetime:
     """Get current UTC time."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
@@ -128,14 +129,16 @@ class ErrorFrame(Frame):
 
     def to_dict(self) -> dict[str, Any]:
         base = Frame.to_dict(self)
-        base.update({
-            "error_type": self.error_type,
-            "error_message": self.error_message,
-            "error_code": self.error_code,
-            "processor_name": self.processor_name,
-            "original_frame_type": self.original_frame_type,
-            "is_fatal": self.is_fatal,
-        })
+        base.update(
+            {
+                "error_type": self.error_type,
+                "error_message": self.error_message,
+                "error_code": self.error_code,
+                "processor_name": self.processor_name,
+                "original_frame_type": self.original_frame_type,
+                "is_fatal": self.is_fatal,
+            }
+        )
         return base
 
     def format_user_message(self) -> str:

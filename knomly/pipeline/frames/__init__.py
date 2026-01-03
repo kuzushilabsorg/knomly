@@ -7,10 +7,10 @@ Each frame type represents a stage of data transformation.
 See ADR-001 for design decisions.
 """
 
+from .action import ConfirmationFrame, UserResponseFrame, ZulipMessageFrame
 from .base import EndFrame, ErrorFrame, ErrorType, Frame, StartFrame
 from .input import AudioInputFrame, TextInputFrame
 from .processing import ExtractionFrame, TranscriptionFrame
-from .action import ConfirmationFrame, UserResponseFrame, ZulipMessageFrame
 from .task import (
     TaskActionFrame,
     TaskData,
@@ -23,30 +23,30 @@ from .task import (
 )
 
 __all__ = [
-    # Base
-    "Frame",
-    "ErrorFrame",
-    "ErrorType",
-    # Control
-    "StartFrame",
-    "EndFrame",
     # Input
     "AudioInputFrame",
+    "ConfirmationFrame",
+    "EndFrame",
+    "ErrorFrame",
+    "ErrorType",
+    "ExtractionFrame",
+    # Base
+    "Frame",
+    # Control
+    "StartFrame",
+    "TaskActionFrame",
+    "TaskData",
+    # Task Management (generic)
+    "TaskFrame",
+    "TaskOperation",
+    "TaskPriority",
+    "TaskQueryFrame",
+    "TaskResultFrame",
+    "TaskStatus",
     "TextInputFrame",
     # Processing
     "TranscriptionFrame",
-    "ExtractionFrame",
     # Action
     "UserResponseFrame",
     "ZulipMessageFrame",
-    "ConfirmationFrame",
-    # Task Management (generic)
-    "TaskFrame",
-    "TaskQueryFrame",
-    "TaskResultFrame",
-    "TaskActionFrame",
-    "TaskData",
-    "TaskPriority",
-    "TaskStatus",
-    "TaskOperation",
 ]

@@ -9,17 +9,16 @@ Tests cover:
 - Lifecycle (initialize/cleanup)
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
+import pytest
+
+from knomly.tools.base import Tool, ToolResult
 from knomly.tools.skill import (
     Skill,
-    SkillProtocol,
     SkillRegistry,
     create_skill_from_openapi,
 )
-from knomly.tools.base import Tool, ToolResult
-
 
 # =============================================================================
 # Test Fixtures

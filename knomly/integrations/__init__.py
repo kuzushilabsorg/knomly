@@ -38,17 +38,17 @@ Usage:
 """
 
 from knomly.integrations.base import (
+    AuthenticationError,
     IntegrationClient,
     IntegrationConfig,
     IntegrationError,
     RateLimitError,
-    AuthenticationError,
 )
 
 __all__ = [
+    "AuthenticationError",
     "IntegrationClient",
     "IntegrationConfig",
     "IntegrationError",
     "RateLimitError",
-    "AuthenticationError",
 ]

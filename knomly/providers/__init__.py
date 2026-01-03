@@ -15,14 +15,13 @@ Features:
 - Provider validation on registration
 """
 
-from .registry import (
-    ProviderConfig,
-    ProviderRegistry,
-    get_registry,
-    set_registry,
-    reset_registry,
+# Chat Providers
+from .chat import (
+    BaseChatProvider,
+    ChatProvider,
+    MessageResult,
+    ZulipChatProvider,
 )
-
 from .health import (
     HealthCheckResult,
     HealthStatus,
@@ -30,17 +29,6 @@ from .health import (
     ProviderMetrics,
     get_health_checker,
     set_health_checker,
-)
-
-# STT Providers
-from .stt import (
-    BaseSTTProvider,
-    DeepgramSTTProvider,
-    DeepgramStreamingSTTProvider,
-    GeminiSTTProvider,
-    STTProvider,
-    TranscriptionResult,
-    WhisperSTTProvider,
 )
 
 # LLM Providers
@@ -57,55 +45,65 @@ from .llm import (
     MessageRole,
     OpenAILLMProvider,
 )
+from .registry import (
+    ProviderConfig,
+    ProviderRegistry,
+    get_registry,
+    reset_registry,
+    set_registry,
+)
 
-# Chat Providers
-from .chat import (
-    BaseChatProvider,
-    ChatProvider,
-    MessageResult,
-    ZulipChatProvider,
+# STT Providers
+from .stt import (
+    BaseSTTProvider,
+    DeepgramStreamingSTTProvider,
+    DeepgramSTTProvider,
+    GeminiSTTProvider,
+    STTProvider,
+    TranscriptionResult,
+    WhisperSTTProvider,
 )
 
 __all__ = [
-    # Registry
-    "ProviderConfig",
-    "ProviderRegistry",
-    "get_registry",
-    "set_registry",
-    "reset_registry",
-    # Health
-    "HealthStatus",
-    "HealthCheckResult",
-    "ProviderMetrics",
-    "ProviderHealthChecker",
-    "get_health_checker",
-    "set_health_checker",
-    # STT - Protocol and Base
-    "STTProvider",
+    "AnthropicLLMProvider",
+    "BaseChatProvider",
+    "BaseLLMProvider",
     "BaseSTTProvider",
-    "TranscriptionResult",
-    # STT - Implementations
-    "GeminiSTTProvider",
+    # Chat - Protocol and Base
+    "ChatProvider",
     "DeepgramSTTProvider",
     "DeepgramStreamingSTTProvider",
-    "WhisperSTTProvider",
+    "GeminiFlashProvider",
+    "GeminiLLMProvider",
+    "GeminiProProvider",
+    # STT - Implementations
+    "GeminiSTTProvider",
+    "HealthCheckResult",
+    # Health
+    "HealthStatus",
+    "LLMConfig",
     # LLM - Protocol and Base
     "LLMProvider",
-    "BaseLLMProvider",
-    "LLMConfig",
     "LLMResponse",
     "Message",
+    "MessageResult",
     "MessageRole",
     # LLM - Implementations
     "OpenAILLMProvider",
-    "AnthropicLLMProvider",
-    "GeminiLLMProvider",
-    "GeminiFlashProvider",
-    "GeminiProProvider",
-    # Chat - Protocol and Base
-    "ChatProvider",
-    "BaseChatProvider",
-    "MessageResult",
+    # Registry
+    "ProviderConfig",
+    "ProviderHealthChecker",
+    "ProviderMetrics",
+    "ProviderRegistry",
+    # STT - Protocol and Base
+    "STTProvider",
+    "TranscriptionResult",
+    "WhisperSTTProvider",
     # Chat - Implementations
     "ZulipChatProvider",
+    "get_health_checker",
+    "get_registry",
+    "reset_registry",
+    "set_health_checker",
+    "set_registry",
 ]

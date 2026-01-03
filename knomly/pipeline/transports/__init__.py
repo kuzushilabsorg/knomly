@@ -57,6 +57,7 @@ Adding New Transports:
             # Send via Telegram Bot API
             ...
 """
+
 from .protocol import SendResult, TransportAdapter
 from .registry import (
     TransportNotFoundError,
@@ -69,17 +70,17 @@ from .registry import (
 from .twilio import TwilioTransport, create_twilio_transport
 
 __all__ = [
+    "SendResult",
     # Protocol
     "TransportAdapter",
-    "SendResult",
+    "TransportNotFoundError",
     # Registry
     "TransportRegistry",
-    "TransportNotFoundError",
-    "get_transport_registry",
-    "get_transport",
-    "register_transport",
-    "reset_transport_registry",
     # Implementations
     "TwilioTransport",
     "create_twilio_transport",
+    "get_transport",
+    "get_transport_registry",
+    "register_transport",
+    "reset_transport_registry",
 ]

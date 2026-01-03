@@ -4,6 +4,7 @@ Error frames for Knomly pipeline.
 These frames represent errors that occurred during pipeline processing.
 They allow graceful error handling and recovery.
 """
+
 from __future__ import annotations
 
 import traceback
@@ -11,7 +12,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .base import Frame
 
@@ -58,20 +59,20 @@ class ErrorFrame(Frame):
 
     error_type: ErrorType = ErrorType.UNKNOWN_ERROR
     error_message: str = "An unknown error occurred"
-    error_code: Optional[str] = None
+    error_code: str | None = None
     recoverable: bool = False
     processor_name: str = ""
     original_frame_type: str = ""
-    exception_type: Optional[str] = None
-    stack_trace: Optional[str] = None
-    sender_phone: Optional[str] = None
+    exception_type: str | None = None
+    stack_trace: str | None = None
+    sender_phone: str | None = None
     retry_count: int = 0
     max_retries: int = 3
 
     _id: uuid.UUID = field(default_factory=uuid.uuid4, repr=False)
     _created_at: datetime = field(default_factory=datetime.utcnow, repr=False)
-    _metadata: Dict[str, Any] = field(default_factory=dict, repr=False)
-    _source_frame_id: Optional[uuid.UUID] = field(default=None, repr=False)
+    _metadata: dict[str, Any] = field(default_factory=dict, repr=False)
+    _source_frame_id: uuid.UUID | None = field(default=None, repr=False)
 
     @property
     def id(self) -> uuid.UUID:
@@ -82,11 +83,11 @@ class ErrorFrame(Frame):
         return self._created_at
 
     @property
-    def metadata(self) -> Dict[str, Any]:
+    def metadata(self) -> dict[str, Any]:
         return self._metadata.copy()
 
     @property
-    def source_frame_id(self) -> Optional[uuid.UUID]:
+    def source_frame_id(self) -> uuid.UUID | None:
         return self._source_frame_id
 
     @property
@@ -119,7 +120,7 @@ class ErrorFrame(Frame):
         else:
             return "Sorry, something went wrong. Please try again later."
 
-    def with_retry(self) -> "ErrorFrame":
+    def with_retry(self) -> ErrorFrame:
         """Create a new error frame with incremented retry count."""
         return ErrorFrame(
             error_type=self.error_type,
@@ -137,7 +138,7 @@ class ErrorFrame(Frame):
             _source_frame_id=self._source_frame_id,
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": str(self._id),
             "frame_type": self.frame_type,
@@ -161,11 +162,11 @@ class ErrorFrame(Frame):
         cls,
         exception: Exception,
         processor_name: str,
-        original_frame: Optional[Frame] = None,
-        error_type: Optional[ErrorType] = None,
-        sender_phone: Optional[str] = None,
+        original_frame: Frame | None = None,
+        error_type: ErrorType | None = None,
+        sender_phone: str | None = None,
         include_stack_trace: bool = True,
-    ) -> "ErrorFrame":
+    ) -> ErrorFrame:
         """
         Factory method to create ErrorFrame from an exception.
 
@@ -209,8 +210,7 @@ class ErrorFrame(Frame):
             original_frame_type=original_frame.frame_type if original_frame else "",
             exception_type=type(exception).__name__,
             stack_trace=traceback.format_exc() if include_stack_trace else None,
-            sender_phone=sender_phone or (
-                getattr(original_frame, "sender_phone", None) if original_frame else None
-            ),
+            sender_phone=sender_phone
+            or (getattr(original_frame, "sender_phone", None) if original_frame else None),
             _source_frame_id=original_frame.id if original_frame else None,
         )

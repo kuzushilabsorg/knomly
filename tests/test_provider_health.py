@@ -1,22 +1,18 @@
 """
 Tests for Provider Health Checks and Enhanced Registry.
 """
-import asyncio
-from datetime import datetime, timezone
 
 import pytest
 
 from knomly.providers import (
     HealthCheckResult,
     HealthStatus,
-    ProviderConfig,
     ProviderHealthChecker,
     ProviderMetrics,
     ProviderRegistry,
     TranscriptionResult,
 )
-from knomly.providers.llm.base import LLMConfig, LLMResponse, Message
-
+from knomly.providers.llm.base import LLMConfig, LLMResponse
 
 # =============================================================================
 # Mock Providers for Testing

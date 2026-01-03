@@ -53,23 +53,28 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
 
-from knomly.pipeline.processor import Processor
-from knomly.pipeline.frames.base import Frame
 from knomly.pipeline.frames.action import UserResponseFrame
+from knomly.pipeline.processor import Processor
 from knomly.tools.factory import (
+    StaticToolFactory,
     ToolContext,
     ToolFactory,
-    StaticToolFactory,
     extract_tool_context_from_frame,
 )
 
 if TYPE_CHECKING:
-    from knomly.pipeline.context import PipelineContext
-    from knomly.tools import Tool, ToolRegistry
-    from knomly.providers.llm import LLMProvider
+    from collections.abc import Sequence
+
     from knomly.agent import AgentExecutor, ExecutionMemory
+    from knomly.agent.result import AgentResult
+    from knomly.integrations.plane.cache import PlaneEntityCache
+    from knomly.integrations.plane.client import PlaneClient
+    from knomly.pipeline.context import PipelineContext
+    from knomly.pipeline.frames.base import Frame
+    from knomly.providers.llm import LLMProvider
+    from knomly.tools import Tool, ToolRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -115,13 +120,13 @@ class AgentBridgeProcessor(Processor):
     def __init__(
         self,
         *,
-        tools: list["Tool"] | None = None,
+        tools: list[Tool] | None = None,
         tool_factory: ToolFactory | None = None,
-        tool_registry: "ToolRegistry | None" = None,
-        llm_provider: "LLMProvider | None" = None,
+        tool_registry: ToolRegistry | None = None,
+        llm_provider: LLMProvider | None = None,
         max_iterations: int = 5,
         timeout_seconds: float = 60.0,
-        memory: "ExecutionMemory | None" = None,
+        memory: ExecutionMemory | None = None,
         secret_provider: callable[[str], dict[str, str]] | None = None,
     ):
         """
@@ -170,13 +175,13 @@ class AgentBridgeProcessor(Processor):
 
         # Executor is now built per-request (for dynamic tools)
         # but we cache the LLM provider
-        self._llm: "LLMProvider | None" = None
+        self._llm: LLMProvider | None = None
 
     @property
     def name(self) -> str:
         return "agent_bridge"
 
-    async def initialize(self, ctx: "PipelineContext") -> None:
+    async def initialize(self, ctx: PipelineContext) -> None:
         """
         Initialize the bridge.
 
@@ -195,18 +200,16 @@ class AgentBridgeProcessor(Processor):
             )
 
         self._llm = llm
-        logger.info(
-            f"[agent_bridge] Initialized | max_iterations={self._max_iterations}"
-        )
+        logger.info(f"[agent_bridge] Initialized | max_iterations={self._max_iterations}")
 
-    def _build_executor(self, tools: Sequence["Tool"]) -> "AgentExecutor":
+    def _build_executor(self, tools: Sequence[Tool]) -> AgentExecutor:
         """
         Build an executor for this request's tools.
 
         Called per-request to create executor with user-scoped tools.
         """
+        from knomly.agent import AgentExecutor, AgentProcessor
         from knomly.tools import ToolRegistry
-        from knomly.agent import AgentProcessor, AgentExecutor
 
         # Build registry from tools
         registry = ToolRegistry()
@@ -251,9 +254,7 @@ class AgentBridgeProcessor(Processor):
         # Prefer external message ID for idempotency
         # Twilio stores MessageSid in metadata
         message_id = (
-            frame.metadata.get("message_sid")
-            or frame.metadata.get("external_id")
-            or str(frame.id)
+            frame.metadata.get("message_sid") or frame.metadata.get("external_id") or str(frame.id)
         )
 
         # Create a deterministic session ID
@@ -262,7 +263,7 @@ class AgentBridgeProcessor(Processor):
     async def process(
         self,
         frame: Frame,
-        ctx: "PipelineContext",
+        ctx: PipelineContext,
     ) -> Frame | Sequence[Frame] | None:
         """
         Process a frame through the v2 agent layer.
@@ -349,9 +350,7 @@ class AgentBridgeProcessor(Processor):
             )
 
         if not tools:
-            logger.warning(
-                f"[agent_bridge] No tools built for user {tool_context.user_id}"
-            )
+            logger.warning(f"[agent_bridge] No tools built for user {tool_context.user_id}")
             return UserResponseFrame(
                 message="I don't have the tools to help with that right now.",
                 sender_phone=getattr(frame, "sender_phone", ""),
@@ -445,12 +444,11 @@ class AgentBridgeProcessor(Processor):
     def _create_response_frame(
         self,
         input_frame: Frame,
-        result: "AgentResult",
+        result: AgentResult,
     ) -> UserResponseFrame:
         """
         Convert agent result to v1-compatible UserResponseFrame.
         """
-        from knomly.agent.result import AgentResult
 
         # Build response message
         if result.success and result.response:
@@ -487,9 +485,9 @@ class AgentBridgeProcessor(Processor):
 
 
 def create_task_agent_bridge(
-    plane_client: "PlaneClient",
-    plane_cache: "PlaneEntityCache",
-    llm_provider: "LLMProvider",
+    plane_client: PlaneClient,
+    plane_cache: PlaneEntityCache,
+    llm_provider: LLMProvider,
     *,
     max_iterations: int = 5,
 ) -> AgentBridgeProcessor:

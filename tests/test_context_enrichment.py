@@ -13,26 +13,25 @@ Design Verification (ADR-004):
 - Frame stream is self-describing
 """
 
-import pytest
 from datetime import datetime
-from dataclasses import replace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
+
+import pytest
 
 from knomly.integrations.plane.cache import (
-    PlaneEntityCache,
     CachedProject,
     CachedUser,
+    PlaneEntityCache,
 )
+from knomly.pipeline.context import PipelineContext
+from knomly.pipeline.frames.base import Frame
+from knomly.pipeline.frames.processing import TranscriptionFrame
 from knomly.pipeline.processors.context_enrichment import (
     ContextEnrichmentProcessor,
     extract_plane_context,
     get_project_prompt_section,
     get_user_prompt_section,
 )
-from knomly.pipeline.frames.base import Frame
-from knomly.pipeline.frames.processing import TranscriptionFrame
-from knomly.pipeline.context import PipelineContext
-
 
 # =============================================================================
 # Fixtures

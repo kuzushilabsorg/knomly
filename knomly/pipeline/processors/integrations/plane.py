@@ -47,23 +47,25 @@ Status Mapping (Generic → Plane):
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
-from knomly.pipeline.processor import Processor
-from knomly.pipeline.frames.base import Frame
 from knomly.pipeline.frames.task import (
-    TaskFrame,
-    TaskQueryFrame,
-    TaskResultFrame,
     TaskData,
+    TaskFrame,
     TaskOperation,
     TaskPriority,
+    TaskQueryFrame,
+    TaskResultFrame,
     TaskStatus,
 )
+from knomly.pipeline.processor import Processor
 
 if TYPE_CHECKING:
-    from knomly.pipeline.context import PipelineContext
+    from collections.abc import Sequence
+
     from knomly.integrations.plane import PlaneClient
+    from knomly.pipeline.context import PipelineContext
+    from knomly.pipeline.frames.base import Frame
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +144,7 @@ class PlaneProcessor(Processor):
 
     def __init__(
         self,
-        client: "PlaneClient",
+        client: PlaneClient,
         *,
         default_project_id: str = "",
         project_mapping: dict[str, str] | None = None,
@@ -209,7 +211,7 @@ class PlaneProcessor(Processor):
     async def process(
         self,
         frame: Frame,
-        ctx: "PipelineContext",
+        ctx: PipelineContext,
     ) -> Frame | Sequence[Frame] | None:
         """
         Process a task frame using Plane.
@@ -232,7 +234,7 @@ class PlaneProcessor(Processor):
     async def _handle_task(
         self,
         frame: TaskFrame,
-        ctx: "PipelineContext",
+        ctx: PipelineContext,
     ) -> TaskResultFrame:
         """Handle task create/update/delete operations."""
         operation = frame.operation
@@ -257,7 +259,7 @@ class PlaneProcessor(Processor):
     async def _create_task(
         self,
         frame: TaskFrame,
-        ctx: "PipelineContext",
+        ctx: PipelineContext,
     ) -> TaskResultFrame:
         """Create a new task in Plane."""
         project_id = self._resolve_project_id(frame.project)
@@ -316,7 +318,7 @@ class PlaneProcessor(Processor):
     async def _update_task(
         self,
         frame: TaskFrame,
-        ctx: "PipelineContext",
+        ctx: PipelineContext,
     ) -> TaskResultFrame:
         """Update an existing task in Plane."""
         project_id = self._resolve_project_id(frame.project)
@@ -338,7 +340,9 @@ class PlaneProcessor(Processor):
                 work_item_id=frame.task_id,
                 name=frame.name or None,
                 description=frame.description or None,
-                priority=PlaneMappings.priority_to_plane(frame.priority) if frame.priority else None,
+                priority=PlaneMappings.priority_to_plane(frame.priority)
+                if frame.priority
+                else None,
                 state_id=self._resolve_state_id(frame.status) if frame.status else None,
                 assignees=list(frame.assignees) if frame.assignees else None,
                 labels=list(frame.labels) if frame.labels else None,
@@ -375,7 +379,7 @@ class PlaneProcessor(Processor):
     async def _delete_task(
         self,
         frame: TaskFrame,
-        ctx: "PipelineContext",
+        ctx: PipelineContext,
     ) -> TaskResultFrame:
         """Delete a task from Plane."""
         project_id = self._resolve_project_id(frame.project)
@@ -422,7 +426,7 @@ class PlaneProcessor(Processor):
     async def _get_task(
         self,
         frame: TaskFrame,
-        ctx: "PipelineContext",
+        ctx: PipelineContext,
     ) -> TaskResultFrame:
         """Get a single task from Plane."""
         project_id = self._resolve_project_id(frame.project)
@@ -450,7 +454,7 @@ class PlaneProcessor(Processor):
                 priority=work_item.priority or "",
                 status=work_item.state.name if work_item.state else "",
                 assignees=tuple(a.email or a.id for a in (work_item.assignees or [])),
-                labels=tuple(l.name for l in (work_item.labels or [])),
+                labels=tuple(label.name for label in (work_item.labels or [])),
                 project=project_id,
                 due_date=work_item.target_date or "",
                 created_at=work_item.created_at.isoformat() if work_item.created_at else "",
@@ -485,7 +489,7 @@ class PlaneProcessor(Processor):
     async def _handle_query(
         self,
         frame: TaskQueryFrame,
-        ctx: "PipelineContext",
+        ctx: PipelineContext,
     ) -> TaskResultFrame:
         """Handle task list/search operations."""
         project_id = self._resolve_project_id(frame.project)
@@ -506,7 +510,9 @@ class PlaneProcessor(Processor):
             result = await self._client.list_work_items(
                 project_id=project_id,
                 state_id=self._resolve_state_id(frame.status) if frame.status else None,
-                priority=PlaneMappings.priority_to_plane(frame.priority) if frame.priority else None,
+                priority=PlaneMappings.priority_to_plane(frame.priority)
+                if frame.priority
+                else None,
                 assignee_id=frame.assignee or None,
                 label_id=frame.label or None,
                 per_page=frame.limit,
@@ -607,7 +613,7 @@ class TaskCreatorProcessor(Processor):
     async def process(
         self,
         frame: Frame,
-        ctx: "PipelineContext",
+        ctx: PipelineContext,
     ) -> Frame | Sequence[Frame] | None:
         """
         Convert extraction results to generic task frames.
@@ -663,7 +669,11 @@ class TaskCreatorProcessor(Processor):
             return TaskPriority.URGENT
         elif "high priority" in task_lower or "important" in task_lower:
             return TaskPriority.HIGH
-        elif "low priority" in task_lower or "when possible" in task_lower or "nice to have" in task_lower:
+        elif (
+            "low priority" in task_lower
+            or "when possible" in task_lower
+            or "nice to have" in task_lower
+        ):
             return TaskPriority.LOW
 
         return self._default_priority

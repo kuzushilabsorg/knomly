@@ -1,6 +1,7 @@
 """
 Tests for Knomly pipeline routing primitives.
 """
+
 import asyncio
 from dataclasses import dataclass
 
@@ -12,7 +13,6 @@ from knomly.pipeline import (
     FanOutStrategy,
     Filter,
     Guard,
-    PassthroughProcessor,
     Pipeline,
     PipelineContext,
     PipelineExit,
@@ -29,7 +29,6 @@ from knomly.pipeline.frames import (
     TextInputFrame,
     TranscriptionFrame,
 )
-
 
 # =============================================================================
 # Test Fixtures
@@ -221,10 +220,12 @@ class TestConditional:
     async def test_works_with_pipeline_as_branch(
         self, audio_frame: AudioInputFrame, ctx: PipelineContext
     ):
-        pipeline_branch = Pipeline([
-            MarkerProcessor("step1"),
-            MarkerProcessor("step2"),
-        ])
+        pipeline_branch = Pipeline(
+            [
+                MarkerProcessor("step1"),
+                MarkerProcessor("step2"),
+            ]
+        )
 
         router = Conditional(
             condition=lambda f, c: True,
@@ -249,9 +250,7 @@ class TestSwitch:
     """Tests for multi-way switch routing."""
 
     @pytest.mark.asyncio
-    async def test_routes_to_matching_case(
-        self, ctx: PipelineContext
-    ):
+    async def test_routes_to_matching_case(self, ctx: PipelineContext):
         frame = TranscriptionFrame(
             original_text="Hola",
             english_text="Hello",
@@ -274,9 +273,7 @@ class TestSwitch:
         assert result.metadata["marker"] == "spanish"
 
     @pytest.mark.asyncio
-    async def test_routes_to_default_when_no_match(
-        self, ctx: PipelineContext
-    ):
+    async def test_routes_to_default_when_no_match(self, ctx: PipelineContext):
         frame = TranscriptionFrame(
             original_text="Test",
             english_text="Test",
@@ -298,9 +295,7 @@ class TestSwitch:
         assert result.metadata["marker"] == "fallback"
 
     @pytest.mark.asyncio
-    async def test_raises_when_no_match_and_no_default(
-        self, ctx: PipelineContext
-    ):
+    async def test_raises_when_no_match_and_no_default(self, ctx: PipelineContext):
         frame = TranscriptionFrame(
             original_text="Test",
             english_text="Test",
@@ -322,9 +317,7 @@ class TestSwitch:
         assert "No case for key 'fr'" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_records_routing_decision(
-        self, ctx: PipelineContext
-    ):
+    async def test_records_routing_decision(self, ctx: PipelineContext):
         frame = TranscriptionFrame(
             original_text="Test",
             english_text="Test",
@@ -372,9 +365,7 @@ class TestTypeRouter:
         assert text_result.metadata["marker"] == "text"
 
     @pytest.mark.asyncio
-    async def test_routes_by_inheritance(
-        self, audio_frame: AudioInputFrame, ctx: PipelineContext
-    ):
+    async def test_routes_by_inheritance(self, audio_frame: AudioInputFrame, ctx: PipelineContext):
         # AudioInputFrame inherits from Frame
         router = TypeRouter(
             routes={
@@ -402,9 +393,7 @@ class TestTypeRouter:
         assert result.metadata["marker"] == "specific"
 
     @pytest.mark.asyncio
-    async def test_routes_to_default_when_no_match(
-        self, ctx: PipelineContext
-    ):
+    async def test_routes_to_default_when_no_match(self, ctx: PipelineContext):
         @dataclass(frozen=True, kw_only=True, slots=True)
         class CustomFrame(Frame):
             custom_field: str = "test"
@@ -546,21 +535,21 @@ class TestGuard:
         assert exc_info.value.exit_frame == exit_frame
 
     @pytest.mark.asyncio
-    async def test_pipeline_handles_guard_exit(
-        self, audio_frame: AudioInputFrame
-    ):
+    async def test_pipeline_handles_guard_exit(self, audio_frame: AudioInputFrame):
         exit_frame = ErrorFrame(
             error_type="blocked",
             error_message="Access denied",
         )
 
-        pipeline = Pipeline([
-            Guard(
-                condition=lambda f, c: True,
-                exit_frame=exit_frame,
-            ),
-            MarkerProcessor("should_not_reach"),
-        ])
+        pipeline = Pipeline(
+            [
+                Guard(
+                    condition=lambda f, c: True,
+                    exit_frame=exit_frame,
+                ),
+                MarkerProcessor("should_not_reach"),
+            ]
+        )
 
         result = await pipeline.execute(audio_frame)
 
@@ -684,9 +673,7 @@ class TestRoutingIntegration:
     """Integration tests for routing with pipelines."""
 
     @pytest.mark.asyncio
-    async def test_nested_conditionals(
-        self, ctx: PipelineContext
-    ):
+    async def test_nested_conditionals(self, ctx: PipelineContext):
         """Test conditionals inside conditionals."""
         inner_router = Conditional(
             condition=lambda f, c: f.confidence > 0.9,
@@ -716,21 +703,23 @@ class TestRoutingIntegration:
         assert result.metadata["marker"] == "low"
 
     @pytest.mark.asyncio
-    async def test_switch_with_pipeline_branches(
-        self, ctx: PipelineContext
-    ):
+    async def test_switch_with_pipeline_branches(self, ctx: PipelineContext):
         """Test switch routing to different pipelines."""
         router = Switch(
             key=lambda f, c: f.detected_language,
             cases={
-                "en": Pipeline([
-                    MarkerProcessor("en_step1"),
-                    MarkerProcessor("en_step2"),
-                ]),
-                "es": Pipeline([
-                    MarkerProcessor("es_step1"),
-                    MarkerProcessor("es_step2"),
-                ]),
+                "en": Pipeline(
+                    [
+                        MarkerProcessor("en_step1"),
+                        MarkerProcessor("en_step2"),
+                    ]
+                ),
+                "es": Pipeline(
+                    [
+                        MarkerProcessor("es_step1"),
+                        MarkerProcessor("es_step2"),
+                    ]
+                ),
             },
             default=MarkerProcessor("default"),
         )
@@ -742,22 +731,22 @@ class TestRoutingIntegration:
         assert result[0].metadata["marker"] == "en_step2"
 
     @pytest.mark.asyncio
-    async def test_routing_in_pipeline(
-        self, audio_frame: AudioInputFrame
-    ):
+    async def test_routing_in_pipeline(self, audio_frame: AudioInputFrame):
         """Test routers as processors in a pipeline."""
-        pipeline = Pipeline([
-            TransformProcessor(),  # AudioInput -> Transcription
-            Filter(
-                condition=lambda f, c: f.confidence > 0.5,
-                on_reject=ErrorFrame(error_type="low_confidence"),
-            ),
-            Conditional(
-                condition=lambda f, c: f.is_translated,
-                if_true=MarkerProcessor("translated"),
-                if_false=MarkerProcessor("original"),
-            ),
-        ])
+        pipeline = Pipeline(
+            [
+                TransformProcessor(),  # AudioInput -> Transcription
+                Filter(
+                    condition=lambda f, c: f.confidence > 0.5,
+                    on_reject=ErrorFrame(error_type="low_confidence"),
+                ),
+                Conditional(
+                    condition=lambda f, c: f.is_translated,
+                    if_true=MarkerProcessor("translated"),
+                    if_false=MarkerProcessor("original"),
+                ),
+            ]
+        )
 
         result = await pipeline.execute(audio_frame)
 
@@ -769,27 +758,30 @@ class TestRoutingIntegration:
     @pytest.mark.asyncio
     async def test_complex_routing_workflow(self):
         """Test complex workflow with multiple routing types."""
+
         @dataclass(frozen=True, kw_only=True, slots=True)
         class WorkflowFrame(Frame):
             stage: str = "start"
             score: float = 0.0
 
         # Build workflow with type routing, guards, and conditionals
-        workflow = Pipeline([
-            # First, check authorization
-            Guard(
-                condition=lambda f, c: f.score < 0,
-                exit_frame=ErrorFrame(error_type="unauthorized"),
-                condition_name="auth_check",
-            ),
-            # Then route based on score
-            Conditional(
-                condition=lambda f, c: f.score > 0.8,
-                if_true=MarkerProcessor("premium"),
-                if_false=MarkerProcessor("standard"),
-                condition_name="tier_check",
-            ),
-        ])
+        workflow = Pipeline(
+            [
+                # First, check authorization
+                Guard(
+                    condition=lambda f, c: f.score < 0,
+                    exit_frame=ErrorFrame(error_type="unauthorized"),
+                    condition_name="auth_check",
+                ),
+                # Then route based on score
+                Conditional(
+                    condition=lambda f, c: f.score > 0.8,
+                    if_true=MarkerProcessor("premium"),
+                    if_false=MarkerProcessor("standard"),
+                    condition_name="tier_check",
+                ),
+            ]
+        )
 
         # Test authorized premium
         premium_frame = WorkflowFrame(score=0.9)

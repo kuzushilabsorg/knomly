@@ -3,10 +3,11 @@ OpenAI LLM Provider for Knomly.
 
 Uses OpenAI's GPT models for text generation.
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .base import BaseLLMProvider, LLMConfig, LLMResponse, Message
 
@@ -31,7 +32,7 @@ class OpenAILLMProvider(BaseLLMProvider):
         self,
         api_key: str,
         model: str = "gpt-4o-mini",
-        organization: Optional[str] = None,
+        organization: str | None = None,
     ):
         """
         Initialize OpenAI LLM provider.
@@ -62,19 +63,18 @@ class OpenAILLMProvider(BaseLLMProvider):
                 )
             except ImportError:
                 raise ImportError(
-                    "openai package is required for OpenAI LLM. "
-                    "Install with: pip install openai"
+                    "openai package is required for OpenAI LLM. " "Install with: pip install openai"
                 )
         return self._client
 
-    def _convert_messages(self, messages: List[Message]) -> List[Dict[str, Any]]:
+    def _convert_messages(self, messages: list[Message]) -> list[dict[str, Any]]:
         """Convert Message objects to OpenAI format."""
         return [msg.to_dict() for msg in messages]
 
     async def complete(
         self,
-        messages: List[Message],
-        config: Optional[LLMConfig] = None,
+        messages: list[Message],
+        config: LLMConfig | None = None,
     ) -> LLMResponse:
         """
         Generate a completion using OpenAI.
@@ -93,7 +93,7 @@ class OpenAILLMProvider(BaseLLMProvider):
             client = self._get_client()
 
             # Build request parameters
-            params: Dict[str, Any] = {
+            params: dict[str, Any] = {
                 "model": config.model or self.default_model,
                 "messages": self._convert_messages(messages),
                 "temperature": config.temperature,
@@ -184,8 +184,8 @@ class AnthropicLLMProvider(BaseLLMProvider):
 
     async def complete(
         self,
-        messages: List[Message],
-        config: Optional[LLMConfig] = None,
+        messages: list[Message],
+        config: LLMConfig | None = None,
     ) -> LLMResponse:
         """
         Generate a completion using Anthropic.
@@ -210,10 +210,12 @@ class AnthropicLLMProvider(BaseLLMProvider):
                 if msg.role.value == "system":
                     system_prompt = msg.content
                 else:
-                    conversation.append({
-                        "role": msg.role.value,
-                        "content": msg.content,
-                    })
+                    conversation.append(
+                        {
+                            "role": msg.role.value,
+                            "content": msg.content,
+                        }
+                    )
 
             # Make API call
             response = await client.messages.create(

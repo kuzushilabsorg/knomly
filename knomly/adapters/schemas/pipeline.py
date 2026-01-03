@@ -46,7 +46,7 @@ Usage:
 
 from __future__ import annotations
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -144,7 +144,7 @@ class PipelineProviderConfig(BaseModel):
         llm_provider: str = "openai",
         tts_provider: str | None = None,
         locale: str = "en",
-    ) -> "PipelineProviderConfig":
+    ) -> PipelineProviderConfig:
         """Create with default provider settings."""
         return cls(
             stt=ProviderDefinition.stt(
@@ -153,11 +153,7 @@ class PipelineProviderConfig(BaseModel):
                 language=locale,
             ),
             llm=ProviderDefinition.llm(llm_provider, model="gpt-4o"),
-            tts=(
-                ProviderDefinition.tts(tts_provider)
-                if tts_provider
-                else None
-            ),
+            tts=(ProviderDefinition.tts(tts_provider) if tts_provider else None),
         )
 
 
@@ -279,7 +275,7 @@ class PipelinePacket(BaseModel):
         pipeline_id: str | None = None,
         pipeline_code: str | None = None,
         **metadata: Any,
-    ) -> "PipelinePacket":
+    ) -> PipelinePacket:
         """
         Factory method to create a packet for a session.
 

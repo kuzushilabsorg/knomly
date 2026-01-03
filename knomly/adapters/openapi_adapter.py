@@ -81,17 +81,18 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
-from datetime import datetime, timedelta, timezone
 
 import httpx
 
 from .base import BaseToolAdapter
 
 if TYPE_CHECKING:
-    from .schemas import ToolDefinition
-    from knomly.tools.factory import ToolContext
     from knomly.tools.base import Tool
+    from knomly.tools.factory import ToolContext
+
+    from .schemas import ToolDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +126,7 @@ class SpecCache:
                 return None
 
             spec, cached_at = self._cache[url]
-            if datetime.now(timezone.utc) - cached_at > self._ttl:
+            if datetime.now(UTC) - cached_at > self._ttl:
                 del self._cache[url]
                 return None
 
@@ -134,7 +135,7 @@ class SpecCache:
     async def set(self, url: str, spec: dict[str, Any]) -> None:
         """Store spec in cache."""
         async with self._lock:
-            self._cache[url] = (spec, datetime.now(timezone.utc))
+            self._cache[url] = (spec, datetime.now(UTC))
 
     async def clear(self) -> None:
         """Clear all cached specs."""
@@ -176,9 +177,7 @@ class OperationCache:
         self._ttl = timedelta(seconds=ttl_seconds)
         self._lock = asyncio.Lock()
 
-    async def get(
-        self, spec_key: str, operation_id: str
-    ) -> tuple[Any, str] | None:
+    async def get(self, spec_key: str, operation_id: str) -> tuple[Any, str] | None:
         """
         Get cached operation and base_url.
 
@@ -195,15 +194,13 @@ class OperationCache:
                 return None
 
             operation, base_url, cached_at = self._cache[cache_key]
-            if datetime.now(timezone.utc) - cached_at > self._ttl:
+            if datetime.now(UTC) - cached_at > self._ttl:
                 del self._cache[cache_key]
                 return None
 
             return (operation, base_url)
 
-    async def set(
-        self, spec_key: str, operation_id: str, operation: Any, base_url: str
-    ) -> None:
+    async def set(self, spec_key: str, operation_id: str, operation: Any, base_url: str) -> None:
         """
         Store parsed operation in cache.
 
@@ -215,12 +212,12 @@ class OperationCache:
         """
         async with self._lock:
             cache_key = (spec_key, operation_id)
-            self._cache[cache_key] = (operation, base_url, datetime.now(timezone.utc))
+            self._cache[cache_key] = (operation, base_url, datetime.now(UTC))
 
     async def get_all_for_spec(self, spec_key: str) -> dict[str, tuple[Any, str]]:
         """Get all cached operations for a spec."""
         async with self._lock:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             result = {}
             for (sk, op_id), (op, base_url, cached_at) in list(self._cache.items()):
                 if sk == spec_key and now - cached_at <= self._ttl:
@@ -346,9 +343,9 @@ class OpenAPIToolAdapter(BaseToolAdapter):
 
     async def build_tool(
         self,
-        definition: "ToolDefinition",
-        context: "ToolContext",
-    ) -> "Tool":
+        definition: ToolDefinition,
+        context: ToolContext,
+    ) -> Tool:
         """
         Build a live Tool from an OpenAPI-based definition.
 
@@ -371,8 +368,8 @@ class OpenAPIToolAdapter(BaseToolAdapter):
         """
         # Import here to avoid circular imports
         from knomly.tools.generic.openapi import (
-            OpenAPIToolkit,
             OpenAPIOperationTool,
+            OpenAPIToolkit,
         )
 
         config = definition.source_config
@@ -383,9 +380,7 @@ class OpenAPIToolAdapter(BaseToolAdapter):
         cached = await self._operation_cache.get(spec_key, operation_id)
         if cached is not None:
             operation, base_url = cached
-            logger.debug(
-                f"[openapi_adapter] Operation cache hit: {operation_id}"
-            )
+            logger.debug(f"[openapi_adapter] Operation cache hit: {operation_id}")
 
             # Build auth from context secrets
             auth = self._build_auth(config, context)
@@ -405,14 +400,13 @@ class OpenAPIToolAdapter(BaseToolAdapter):
 
             logger.info(
                 f"[openapi_adapter] Built tool from cache: {tool.name} "
-                f"({tool.annotations.read_only_hint and 'read-only' or 'read-write'})"
+                f"({(tool.annotations.read_only_hint and 'read-only') or 'read-write'})"
             )
             return tool
 
         # 2. Cache miss - need to parse spec
         logger.info(
-            f"[openapi_adapter] Building tool: {definition.name} "
-            f"(operation_id={operation_id})"
+            f"[openapi_adapter] Building tool: {definition.name} " f"(operation_id={operation_id})"
         )
 
         # Get the OpenAPI spec (spec cache)
@@ -454,8 +448,7 @@ class OpenAPIToolAdapter(BaseToolAdapter):
         except KeyError:
             available = toolkit.list_operations()[:5]
             raise ValueError(
-                f"Operation '{operation_id}' not found in spec. "
-                f"Available: {available}..."
+                f"Operation '{operation_id}' not found in spec. " f"Available: {available}..."
             )
 
         # Cache the parsed operation for future requests
@@ -467,7 +460,7 @@ class OpenAPIToolAdapter(BaseToolAdapter):
 
         logger.info(
             f"[openapi_adapter] Built tool: {tool.name} "
-            f"({tool.annotations.read_only_hint and 'read-only' or 'read-write'})"
+            f"({(tool.annotations.read_only_hint and 'read-only') or 'read-write'})"
         )
 
         return tool
@@ -512,6 +505,7 @@ class OpenAPIToolAdapter(BaseToolAdapter):
         except Exception:
             try:
                 import yaml
+
                 spec = yaml.safe_load(response.text)
             except ImportError:
                 raise ValueError(
@@ -527,7 +521,7 @@ class OpenAPIToolAdapter(BaseToolAdapter):
     def _build_auth(
         self,
         config: dict[str, Any],
-        context: "ToolContext",
+        context: ToolContext,
     ) -> dict[str, str] | None:
         """
         Build auth dict from config and context secrets.
@@ -545,9 +539,7 @@ class OpenAPIToolAdapter(BaseToolAdapter):
 
         auth_value = context.secrets.get(auth_secret_key)
         if not auth_value:
-            logger.warning(
-                f"[openapi_adapter] Secret '{auth_secret_key}' not found in context"
-            )
+            logger.warning(f"[openapi_adapter] Secret '{auth_secret_key}' not found in context")
             return None
 
         auth_type = config.get("auth_type", "bearer")
@@ -606,7 +598,7 @@ class OpenAPISpecImporter:
         auth_secret_key: str | None = None,
         tags_filter: list[str] | None = None,
         operations_filter: list[str] | None = None,
-    ) -> list["ToolDefinition"]:
+    ) -> list[ToolDefinition]:
         """
         Import operations from an OpenAPI spec as ToolDefinitions.
 
@@ -622,8 +614,9 @@ class OpenAPISpecImporter:
         Returns:
             List of ToolDefinition objects
         """
-        from .schemas import ToolDefinition
         from knomly.tools.generic.openapi import OpenAPIToolkit
+
+        from .schemas import ToolDefinition
 
         # Fetch spec if URL provided
         if spec is None:
@@ -686,7 +679,7 @@ async def import_openapi_tools(
     *,
     auth_secret_key: str | None = None,
     tags: list[str] | None = None,
-) -> list["ToolDefinition"]:
+) -> list[ToolDefinition]:
     """
     Convenience function to import tools from an OpenAPI spec.
 

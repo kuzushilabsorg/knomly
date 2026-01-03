@@ -10,19 +10,19 @@ Tests cover:
 - PlaneToolFactory (mocked)
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+from knomly.tools.base import Tool, ToolResult
 from knomly.tools.factory import (
-    ToolContext,
-    ToolFactory,
-    StaticToolFactory,
     CompositeToolFactory,
     ConditionalToolFactory,
+    StaticToolFactory,
+    ToolContext,
+    ToolFactory,
     extract_tool_context_from_frame,
 )
-from knomly.tools.base import Tool, ToolResult
-
 
 # =============================================================================
 # Mock Tool for Testing
@@ -502,11 +502,13 @@ class TestFactoryIntegration:
 
         base_factory = StaticToolFactory([MockTool("base_tool")])
 
-        composite = CompositeToolFactory([
-            base_factory,
-            admin_factory,
-            premium_factory,
-        ])
+        composite = CompositeToolFactory(
+            [
+                base_factory,
+                admin_factory,
+                premium_factory,
+            ]
+        )
 
         # Regular user: only base tools
         regular_ctx = ToolContext(user_id="regular")

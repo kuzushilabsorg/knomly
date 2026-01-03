@@ -15,25 +15,22 @@ Core Invariant (ADR-004):
 All agent interactions must be visible through frame metadata.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
 
+import pytest
+
+from knomly.agent.frames import AgentResponseFrame
+from knomly.agent.result import AgentResult
+from knomly.pipeline.frames import (
+    TranscriptionFrame,
+    UserResponseFrame,
+)
 from knomly.pipeline.processors.agent_bridge import (
     AgentBridgeProcessor,
     create_task_agent_bridge,
 )
-from knomly.pipeline.frames import (
-    Frame,
-    TranscriptionFrame,
-    UserResponseFrame,
-)
 from knomly.tools.base import Tool, ToolResult
-from knomly.tools.registry import ToolRegistry
 from knomly.tools.factory import StaticToolFactory, ToolContext
-from knomly.agent.frames import AgentResponseFrame
-from knomly.agent.result import AgentResult, success_result
-
 
 # =============================================================================
 # Test Fixtures
@@ -44,7 +41,9 @@ class MockLLMProvider:
     """Mock LLM provider for testing."""
 
     def __init__(self, responses: list[str] | None = None):
-        self._responses = responses or ['{"action": "respond", "message": "Done!", "reasoning": "Test"}']
+        self._responses = responses or [
+            '{"action": "respond", "message": "Done!", "reasoning": "Test"}'
+        ]
         self._call_count = 0
 
     async def complete(self, messages, config=None):
@@ -112,9 +111,7 @@ def mock_plane_cache():
     cache = MagicMock()
     cache.resolve_project = MagicMock(return_value="project-uuid-123")
     cache.resolve_user = MagicMock(return_value="user-uuid-123")
-    cache.get_project_mapping = MagicMock(
-        return_value={"Mobile App": "project-uuid-123"}
-    )
+    cache.get_project_mapping = MagicMock(return_value={"Mobile App": "project-uuid-123"})
     return cache
 
 
@@ -167,9 +164,7 @@ class TestAgentBridgeProcessor:
         assert processor.name == "agent_bridge"
 
     @pytest.mark.asyncio
-    async def test_initialize_resolves_llm(
-        self, mock_llm, mock_context
-    ):
+    async def test_initialize_resolves_llm(self, mock_llm, mock_context):
         """Test initialization resolves LLM provider."""
         processor = AgentBridgeProcessor(
             tools=[MockTool()],
@@ -321,9 +316,7 @@ class TestAgentBridgeProcessor:
         assert "agent_duration_ms" in result.metadata  # Just check it exists
 
     @pytest.mark.asyncio
-    async def test_process_handles_empty_goal(
-        self, mock_llm, mock_context
-    ):
+    async def test_process_handles_empty_goal(self, mock_llm, mock_context):
         """Test handling frame with no extractable goal."""
         processor = AgentBridgeProcessor(
             tools=[MockTool()],
@@ -360,9 +353,7 @@ class TestContextHandoff:
     """
 
     @pytest.mark.asyncio
-    async def test_plane_context_preserved_in_frame(
-        self, enriched_transcription_frame
-    ):
+    async def test_plane_context_preserved_in_frame(self, enriched_transcription_frame):
         """Verify plane_context is in frame metadata."""
         assert "plane_context" in enriched_transcription_frame.metadata
 
@@ -418,9 +409,7 @@ class TestContextHandoff:
 class TestCreateTaskAgentBridge:
     """Tests for create_task_agent_bridge factory function."""
 
-    def test_creates_processor_with_factory(
-        self, mock_plane_client, mock_plane_cache, mock_llm
-    ):
+    def test_creates_processor_with_factory(self, mock_plane_client, mock_plane_cache, mock_llm):
         """Test factory creates processor with StaticToolFactory."""
         processor = create_task_agent_bridge(
             plane_client=mock_plane_client,
@@ -434,9 +423,7 @@ class TestCreateTaskAgentBridge:
         tools = processor._tool_factory.build_tools(ToolContext(user_id="test"))
         assert len(tools) == 2  # PlaneCreateTaskTool, PlaneQueryTasksTool
 
-    def test_respects_max_iterations(
-        self, mock_plane_client, mock_plane_cache, mock_llm
-    ):
+    def test_respects_max_iterations(self, mock_plane_client, mock_plane_cache, mock_llm):
         """Test factory respects max_iterations parameter."""
         processor = create_task_agent_bridge(
             plane_client=mock_plane_client,
@@ -626,9 +613,7 @@ class TestMultiTenantIsolation:
             metadata={"user_id": "user-alice"},
         )
 
-        ctx = extract_tool_context_from_frame(
-            frame, secret_provider=mock_secret_provider
-        )
+        ctx = extract_tool_context_from_frame(frame, secret_provider=mock_secret_provider)
 
         # Verify provider was called with alice's user_id
         assert "user-alice" in mock_secret_provider.calls
@@ -643,8 +628,8 @@ class TestMultiTenantIsolation:
 
         This prevents secrets from leaking via serialization.
         """
+
         from knomly.tools.factory import extract_tool_context_from_frame
-        import logging
 
         # Create frame with secrets in metadata (should be ignored)
         frame = TranscriptionFrame(
@@ -661,9 +646,7 @@ class TestMultiTenantIsolation:
 
         # Use a caplog fixture to verify warning is logged
         with patch("knomly.tools.factory.logger") as mock_logger:
-            ctx = extract_tool_context_from_frame(
-                frame, secret_provider=mock_secret_provider
-            )
+            ctx = extract_tool_context_from_frame(frame, secret_provider=mock_secret_provider)
 
             # Verify warning was logged about secrets in frame
             mock_logger.warning.assert_called()
@@ -676,9 +659,7 @@ class TestMultiTenantIsolation:
         assert ctx.secrets == {"plane_api_key": "alice-secret-key"}
 
     @pytest.mark.asyncio
-    async def test_different_users_get_different_secrets(
-        self, mock_llm, mock_secret_provider
-    ):
+    async def test_different_users_get_different_secrets(self, mock_llm, mock_secret_provider):
         """Verify users are isolated - each gets their own secrets."""
         from knomly.tools.factory import extract_tool_context_from_frame
 
@@ -705,9 +686,7 @@ class TestMultiTenantIsolation:
         alice_ctx = extract_tool_context_from_frame(
             alice_frame, secret_provider=mock_secret_provider
         )
-        bob_ctx = extract_tool_context_from_frame(
-            bob_frame, secret_provider=mock_secret_provider
-        )
+        bob_ctx = extract_tool_context_from_frame(bob_frame, secret_provider=mock_secret_provider)
 
         # Verify isolation
         assert alice_ctx.secrets["plane_api_key"] == "alice-secret-key"
@@ -715,9 +694,7 @@ class TestMultiTenantIsolation:
         assert alice_ctx.secrets != bob_ctx.secrets
 
     @pytest.mark.asyncio
-    async def test_tool_deduplication_dynamic_wins(
-        self, mock_llm, enriched_transcription_frame
-    ):
+    async def test_tool_deduplication_dynamic_wins(self, mock_llm, enriched_transcription_frame):
         """
         Verify tool precedence: dynamic tools (resolver) > factory tools.
 
@@ -776,9 +753,7 @@ class TestMultiTenantIsolation:
         assert create_task_tools[0][1] == "dynamic"  # Dynamic won
 
     @pytest.mark.asyncio
-    async def test_secret_provider_failure_graceful_degradation(
-        self, mock_llm
-    ):
+    async def test_secret_provider_failure_graceful_degradation(self, mock_llm):
         """Verify system continues if secret_provider fails."""
         from knomly.tools.factory import extract_tool_context_from_frame
 
@@ -795,9 +770,7 @@ class TestMultiTenantIsolation:
         )
 
         # Should not raise - graceful degradation
-        ctx = extract_tool_context_from_frame(
-            frame, secret_provider=failing_provider
-        )
+        ctx = extract_tool_context_from_frame(frame, secret_provider=failing_provider)
 
         # Secrets are empty, but user_id is preserved
         assert ctx.user_id == "user-alice"

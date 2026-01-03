@@ -15,28 +15,27 @@ Core Invariant (ADR-004):
 Every agent decision must be visible in the frame stream.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime
 
-from knomly.tools.base import Tool, ToolResult, ToolAnnotations, ContentBlock
-from knomly.tools.registry import ToolRegistry, ToolRegistryError
+import pytest
+
 from knomly.agent.frames import (
     AgentAction,
+    AgentControlFrame,
+    AgentResponseFrame,
     PlanFrame,
     ToolCallFrame,
     ToolResultFrame,
-    AgentResponseFrame,
-    AgentControlFrame,
     create_initial_plan,
 )
 from knomly.agent.result import (
     AgentResult,
+    max_iterations_result,
     success_result,
     timeout_result,
-    max_iterations_result,
 )
-
+from knomly.tools.base import ContentBlock, Tool, ToolAnnotations, ToolResult
+from knomly.tools.registry import ToolRegistry, ToolRegistryError
 
 # =============================================================================
 # Test Fixtures

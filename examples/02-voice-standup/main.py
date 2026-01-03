@@ -22,6 +22,7 @@ Environment variables:
     ZULIP_EMAIL
     ZULIP_SITE
 """
+
 import asyncio
 import os
 from dataclasses import dataclass
@@ -31,12 +32,10 @@ from knomly import (
     PipelineBuilder,
     PipelineContext,
     Processor,
-    Switch,
     TwilioTransport,
     register_transport,
 )
 from knomly.pipeline.frames import Frame
-
 
 # =============================================================================
 # Configuration
@@ -46,6 +45,7 @@ from knomly.pipeline.frames import Frame
 @dataclass
 class Config:
     """Application configuration."""
+
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_from_number: str = ""
@@ -76,6 +76,7 @@ class Config:
 @dataclass(frozen=True, kw_only=True, slots=True)
 class AudioFrame(Frame):
     """Audio input frame."""
+
     audio_url: str = ""
     audio_bytes: bytes | None = None
     sender_phone: str = ""
@@ -84,6 +85,7 @@ class AudioFrame(Frame):
 @dataclass(frozen=True, kw_only=True, slots=True)
 class TranscriptionFrame(Frame):
     """Transcribed text frame."""
+
     text: str = ""
     language: str = "en"
     sender_phone: str = ""
@@ -92,6 +94,7 @@ class TranscriptionFrame(Frame):
 @dataclass(frozen=True, kw_only=True, slots=True)
 class StandupFrame(Frame):
     """Extracted standup items."""
+
     today_items: tuple[str, ...] = ()
     blockers: tuple[str, ...] = ()
     summary: str = ""
@@ -101,6 +104,7 @@ class StandupFrame(Frame):
 @dataclass(frozen=True, kw_only=True, slots=True)
 class PostedFrame(Frame):
     """Posted to chat."""
+
     message_id: int = 0
     channel: str = ""
     success: bool = True

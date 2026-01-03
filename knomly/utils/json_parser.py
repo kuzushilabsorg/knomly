@@ -8,6 +8,7 @@ Handles common issues with LLM-generated JSON:
 - Comments
 - Partial JSON extraction
 """
+
 from __future__ import annotations
 
 import json
@@ -70,9 +71,8 @@ def extract_json_from_text(text: str) -> str:
 def _looks_like_json(text: str) -> bool:
     """Quick check if text looks like JSON."""
     text = text.strip()
-    return (
-        (text.startswith("{") and text.endswith("}"))
-        or (text.startswith("[") and text.endswith("]"))
+    return (text.startswith("{") and text.endswith("}")) or (
+        text.startswith("[") and text.endswith("]")
     )
 
 
@@ -241,14 +241,14 @@ def _ensure_list(value: Any) -> list[str]:
         return []
     if isinstance(value, str):
         return [value] if value.strip() else []
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return [str(item) for item in value if item]
     return []
 
 
 __all__ = [
-    "extract_json_from_text",
     "clean_json_string",
+    "extract_json_from_text",
     "parse_json_safely",
     "parse_standup_json",
 ]

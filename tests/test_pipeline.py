@@ -3,17 +3,17 @@ Tests for Knomly pipeline execution.
 
 Tests Pipeline, PipelineBuilder, and processor integration.
 """
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from knomly.pipeline import Pipeline, PipelineBuilder, PipelineContext, PipelineResult
-from knomly.pipeline.processor import Processor
 from knomly.pipeline.frames import (
     AudioInputFrame,
     ErrorFrame,
     Frame,
     TranscriptionFrame,
 )
+from knomly.pipeline.processor import Processor
 
 
 class MockPassthroughProcessor(Processor):
@@ -103,11 +103,13 @@ class TestPipeline:
                 execution_order.append(self._name)
                 return frame
 
-        pipeline = Pipeline([
-            OrderTrackingProcessor("first"),
-            OrderTrackingProcessor("second"),
-            OrderTrackingProcessor("third"),
-        ])
+        pipeline = Pipeline(
+            [
+                OrderTrackingProcessor("first"),
+                OrderTrackingProcessor("second"),
+                OrderTrackingProcessor("third"),
+            ]
+        )
 
         frame = AudioInputFrame()
         await pipeline.execute(frame)
@@ -117,10 +119,12 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_passthrough(self):
         """Pipeline with passthrough processors should preserve frame."""
-        pipeline = Pipeline([
-            MockPassthroughProcessor(),
-            MockPassthroughProcessor(),
-        ])
+        pipeline = Pipeline(
+            [
+                MockPassthroughProcessor(),
+                MockPassthroughProcessor(),
+            ]
+        )
 
         input_frame = AudioInputFrame(sender_phone="123456")
         result = await pipeline.execute(input_frame)
@@ -132,9 +136,11 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_transform(self):
         """Pipeline should handle frame transformations."""
-        pipeline = Pipeline([
-            MockTransformProcessor(),
-        ])
+        pipeline = Pipeline(
+            [
+                MockTransformProcessor(),
+            ]
+        )
 
         input_frame = AudioInputFrame(sender_phone="123456")
         result = await pipeline.execute(input_frame)
@@ -147,9 +153,11 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_filter(self):
         """Pipeline should handle filtered frames (None return)."""
-        pipeline = Pipeline([
-            MockFilterProcessor(),
-        ])
+        pipeline = Pipeline(
+            [
+                MockFilterProcessor(),
+            ]
+        )
 
         # Frame without audio should be filtered
         input_frame = AudioInputFrame(media_url="http://test.com")
@@ -161,9 +169,11 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_fanout(self):
         """Pipeline should handle multiple output frames."""
-        pipeline = Pipeline([
-            MockFanOutProcessor(),
-        ])
+        pipeline = Pipeline(
+            [
+                MockFanOutProcessor(),
+            ]
+        )
 
         input_frame = AudioInputFrame()
         result = await pipeline.execute(input_frame)
@@ -174,9 +184,11 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_error_handling(self):
         """Pipeline should convert exceptions to ErrorFrames."""
-        pipeline = Pipeline([
-            MockErrorProcessor(),
-        ])
+        pipeline = Pipeline(
+            [
+                MockErrorProcessor(),
+            ]
+        )
 
         input_frame = AudioInputFrame()
         result = await pipeline.execute(input_frame)
@@ -201,10 +213,12 @@ class TestPipeline:
                 received_contexts.append(ctx)
                 return frame
 
-        pipeline = Pipeline([
-            ContextCapturingProcessor(),
-            ContextCapturingProcessor(),
-        ])
+        pipeline = Pipeline(
+            [
+                ContextCapturingProcessor(),
+                ContextCapturingProcessor(),
+            ]
+        )
 
         ctx = PipelineContext(sender_phone="test")
         await pipeline.execute(AudioInputFrame(), ctx)
@@ -216,9 +230,11 @@ class TestPipeline:
     @pytest.mark.asyncio
     async def test_pipeline_records_timings(self):
         """Pipeline should record processor timings."""
-        pipeline = Pipeline([
-            MockPassthroughProcessor(),
-        ])
+        pipeline = Pipeline(
+            [
+                MockPassthroughProcessor(),
+            ]
+        )
 
         ctx = PipelineContext()
         await pipeline.execute(AudioInputFrame(), ctx)
@@ -248,10 +264,7 @@ class TestPipelineBuilder:
     def test_builder_add_processors(self):
         """Builder should add processors in order."""
         pipeline = (
-            PipelineBuilder()
-            .add(MockPassthroughProcessor())
-            .add(MockTransformProcessor())
-            .build()
+            PipelineBuilder().add(MockPassthroughProcessor()).add(MockTransformProcessor()).build()
         )
 
         assert len(pipeline.processors) == 2
@@ -298,6 +311,7 @@ class TestPipelineContext:
         ctx = PipelineContext()
         # Small sleep to ensure time passes
         import time
+
         time.sleep(0.01)
         assert ctx.elapsed_ms > 0
 

@@ -8,19 +8,18 @@ This example demonstrates intent-based routing:
 
 Run: python -m examples.03-intent-routing.main
 """
+
 import asyncio
 from dataclasses import dataclass
 from enum import Enum
 
 from knomly import (
-    Pipeline,
     PipelineBuilder,
     PipelineContext,
     Processor,
     Switch,
 )
 from knomly.pipeline.frames import Frame
-
 
 # =============================================================================
 # Intent Enum
@@ -42,6 +41,7 @@ class Intent(Enum):
 @dataclass(frozen=True, kw_only=True, slots=True)
 class UserMessageFrame(Frame):
     """User message with intent."""
+
     text: str = ""
     intent: str = "unknown"
     confidence: float = 0.0
@@ -50,6 +50,7 @@ class UserMessageFrame(Frame):
 @dataclass(frozen=True, kw_only=True, slots=True)
 class ResponseFrame(Frame):
     """Bot response."""
+
     response: str = ""
     intent_handled: str = ""
 
@@ -195,16 +196,18 @@ async def main():
     pipeline = (
         PipelineBuilder()
         .add(IntentClassifier())
-        .add(Switch(
-            key=get_intent,
-            cases={
-                Intent.GREETING.value: GreetingHandler(),
-                Intent.QUESTION.value: QuestionHandler(),
-                Intent.COMMAND.value: CommandHandler(),
-            },
-            default=UnknownHandler(),
-            key_name="intent",
-        ))
+        .add(
+            Switch(
+                key=get_intent,
+                cases={
+                    Intent.GREETING.value: GreetingHandler(),
+                    Intent.QUESTION.value: QuestionHandler(),
+                    Intent.COMMAND.value: CommandHandler(),
+                },
+                default=UnknownHandler(),
+                key_name="intent",
+            )
+        )
         .build()
     )
 

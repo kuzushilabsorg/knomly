@@ -3,13 +3,14 @@ Chat Provider Protocol for Knomly.
 
 Defines the interface for chat/messaging providers (Zulip, Slack, etc.).
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 
 class MessageType(str, Enum):
@@ -37,9 +38,9 @@ class ChatMessage:
     stream: str = ""
     topic: str = ""
     message_type: MessageType = MessageType.STREAM
-    recipients: List[str] = field(default_factory=list)
+    recipients: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "content": self.content,
             "stream": self.stream,
@@ -64,13 +65,13 @@ class MessageResult:
     """
 
     success: bool
-    message_id: Optional[int] = None
+    message_id: int | None = None
     stream: str = ""
     topic: str = ""
-    error: Optional[str] = None
+    error: str | None = None
     timestamp: datetime = field(default_factory=datetime.utcnow)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "success": self.success,
             "message_id": self.message_id,
@@ -96,7 +97,7 @@ class StreamInfo:
     stream_id: int
     name: str
     description: str = ""
-    topics: List[str] = field(default_factory=list)
+    topics: list[str] = field(default_factory=list)
 
 
 @runtime_checkable
@@ -163,7 +164,7 @@ class BaseChatProvider(ABC):
 
     async def send_private_message(
         self,
-        recipients: List[str],
+        recipients: list[str],
         content: str,
     ) -> MessageResult:
         """
@@ -172,31 +173,25 @@ class BaseChatProvider(ABC):
         Default implementation raises NotImplementedError.
         Override in providers that support DMs.
         """
-        raise NotImplementedError(
-            f"{self.name} does not support private messages"
-        )
+        raise NotImplementedError(f"{self.name} does not support private messages")
 
-    async def list_streams(self) -> List[StreamInfo]:
+    async def list_streams(self) -> list[StreamInfo]:
         """
         List available streams/channels.
 
         Default implementation raises NotImplementedError.
         Override in providers that support stream listing.
         """
-        raise NotImplementedError(
-            f"{self.name} does not support stream listing"
-        )
+        raise NotImplementedError(f"{self.name} does not support stream listing")
 
-    async def get_stream_topics(self, stream: str) -> List[str]:
+    async def get_stream_topics(self, stream: str) -> list[str]:
         """
         Get topics in a stream.
 
         Default implementation raises NotImplementedError.
         Override in providers that support topic listing.
         """
-        raise NotImplementedError(
-            f"{self.name} does not support topic listing"
-        )
+        raise NotImplementedError(f"{self.name} does not support topic listing")
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(name='{self.name}')"

@@ -35,14 +35,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Sequence
-
-from knomly.tools.factory import ToolContext
-from knomly.tools.base import Tool
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from knomly.integrations.plane import PlaneClient
-    from knomly.integrations.plane.cache import PlaneEntityCache
+    from collections.abc import Sequence
+
+    from knomly.tools.base import Tool
+    from knomly.tools.factory import ToolContext
 
 logger = logging.getLogger(__name__)
 
@@ -101,26 +100,23 @@ class PlaneToolFactory:
         Raises:
             KeyError: If plane_api_key not in context.secrets
         """
+        from knomly.integrations.base import IntegrationConfig
         from knomly.integrations.plane import PlaneClient
         from knomly.integrations.plane.cache import PlaneEntityCache
-        from knomly.integrations.base import IntegrationConfig
         from knomly.tools.plane import PlaneCreateTaskTool, PlaneQueryTasksTool
 
         # Get API key from context
         api_key = context.secrets.get(PLANE_API_KEY)
         if not api_key:
             logger.warning(
-                f"[plane_factory] No API key for user {context.user_id}, "
-                f"returning empty tools"
+                f"[plane_factory] No API key for user {context.user_id}, " f"returning empty tools"
             )
             return ()
 
         # Get workspace (from context or default)
         workspace = context.secrets.get(PLANE_WORKSPACE) or self.workspace_slug
         if not workspace:
-            logger.warning(
-                f"[plane_factory] No workspace for user {context.user_id}"
-            )
+            logger.warning(f"[plane_factory] No workspace for user {context.user_id}")
             return ()
 
         # Build client config
@@ -142,9 +138,7 @@ class PlaneToolFactory:
         if self.include_query_tool:
             tools.append(PlaneQueryTasksTool(client=client, cache=cache))
 
-        logger.debug(
-            f"[plane_factory] Built {len(tools)} tools for user {context.user_id}"
-        )
+        logger.debug(f"[plane_factory] Built {len(tools)} tools for user {context.user_id}")
 
         return tuple(tools)
 
@@ -197,9 +191,9 @@ class CachedPlaneToolFactory:
         workspace: str,
     ) -> tuple[Any, Any]:
         """Get cached client or create new one."""
+        from knomly.integrations.base import IntegrationConfig
         from knomly.integrations.plane import PlaneClient
         from knomly.integrations.plane.cache import PlaneEntityCache
-        from knomly.integrations.base import IntegrationConfig
 
         # Check cache
         if user_id in self._clients:

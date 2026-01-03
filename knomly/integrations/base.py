@@ -154,12 +154,14 @@ class IntegrationResponse(Generic[T]):
     headers: dict[str, str] = field(default_factory=dict)
 
     @classmethod
-    def ok(cls, data: T, status_code: int = 200, headers: dict[str, str] | None = None) -> "IntegrationResponse[T]":
+    def ok(
+        cls, data: T, status_code: int = 200, headers: dict[str, str] | None = None
+    ) -> IntegrationResponse[T]:
         """Create a successful response."""
         return cls(success=True, data=data, status_code=status_code, headers=headers or {})
 
     @classmethod
-    def fail(cls, error: str, status_code: int | None = None) -> "IntegrationResponse[T]":
+    def fail(cls, error: str, status_code: int | None = None) -> IntegrationResponse[T]:
         """Create a failed response."""
         return cls(success=False, error=error, status_code=status_code)
 
@@ -331,7 +333,7 @@ class IntegrationClient(ABC):
             return error.retry_after
 
         # Exponential backoff: delay * (2 ^ attempt)
-        base_delay = self.config.retry_delay * (2 ** attempt)
+        base_delay = self.config.retry_delay * (2**attempt)
 
         # Add jitter (±25%) to prevent thundering herd
         jitter = base_delay * 0.25 * (2 * random.random() - 1)
@@ -467,7 +469,7 @@ class IntegrationClient(ABC):
         except Exception:
             return False
 
-    async def __aenter__(self) -> "IntegrationClient":
+    async def __aenter__(self) -> IntegrationClient:
         """Async context manager entry."""
         return self
 

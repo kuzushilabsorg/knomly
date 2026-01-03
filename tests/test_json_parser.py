@@ -1,11 +1,10 @@
 """
 Tests for robust JSON parsing utilities.
 """
-import pytest
 
 from knomly.utils.json_parser import (
-    extract_json_from_text,
     clean_json_string,
+    extract_json_from_text,
     parse_json_safely,
     parse_standup_json,
 )
@@ -54,19 +53,19 @@ class TestCleanJsonString:
         assert result == '{"a": 1, "b": 2}'
 
     def test_removes_trailing_comma_in_array(self):
-        text = '[1, 2, 3,]'
+        text = "[1, 2, 3,]"
         result = clean_json_string(text)
-        assert result == '[1, 2, 3]'
+        assert result == "[1, 2, 3]"
 
     def test_removes_single_line_comments(self):
         text = '{"a": 1 // comment\n}'
         result = clean_json_string(text)
-        assert '// comment' not in result
+        assert "// comment" not in result
 
     def test_removes_multi_line_comments(self):
         text = '{"a": /* comment */ 1}'
         result = clean_json_string(text)
-        assert '/* comment */' not in result
+        assert "/* comment */" not in result
 
 
 class TestParseJsonSafely:
@@ -96,14 +95,14 @@ class TestParseJsonSafely:
         assert result == {"a": 1}
 
     def test_handles_complex_nested_json(self):
-        text = '''
+        text = """
         ```json
         {
             "items": ["a", "b"],
             "nested": {"key": "value"}
         }
         ```
-        '''
+        """
         result = parse_json_safely(text)
         assert result["items"] == ["a", "b"]
         assert result["nested"]["key"] == "value"
@@ -113,14 +112,14 @@ class TestParseStandupJson:
     """Tests for parse_standup_json."""
 
     def test_parses_complete_standup(self):
-        text = '''
+        text = """
         {
             "today_items": ["Task 1", "Task 2"],
             "yesterday_items": ["Done 1"],
             "blockers": ["Issue 1"],
             "summary": "Working on tasks"
         }
-        '''
+        """
         result = parse_standup_json(text)
 
         assert result["today_items"] == ["Task 1", "Task 2"]
@@ -155,13 +154,13 @@ class TestParseStandupJson:
         assert result["blockers"] == []
 
     def test_handles_markdown_wrapped_response(self):
-        text = '''```json
+        text = """```json
         {
             "today_items": ["Working on feature"],
             "blockers": [],
             "summary": "Coding"
         }
-        ```'''
+        ```"""
         result = parse_standup_json(text)
 
         assert result["today_items"] == ["Working on feature"]

@@ -1,6 +1,7 @@
 """
 Tests for Knomly retry and resilience patterns.
 """
+
 import asyncio
 import time
 
@@ -26,7 +27,6 @@ from knomly.pipeline import (
     with_retry,
 )
 from knomly.pipeline.frames import AudioInputFrame, Frame
-
 
 # =============================================================================
 # Backoff Strategy Tests
@@ -89,9 +89,7 @@ class TestExponentialBackoff:
         assert backoff.get_delay(4) == 8.0
 
     def test_respects_max_delay(self):
-        backoff = ExponentialBackoff(
-            base=1.0, multiplier=10.0, max_delay=5.0, jitter=False
-        )
+        backoff = ExponentialBackoff(base=1.0, multiplier=10.0, max_delay=5.0, jitter=False)
         assert backoff.get_delay(1) == 1.0
         assert backoff.get_delay(2) == 5.0  # Capped at 5.0, not 10.0
         assert backoff.get_delay(3) == 5.0
@@ -562,9 +560,7 @@ class TestResilientProcessor:
         assert result.metadata.get("processed") is True
 
     @pytest.mark.asyncio
-    async def test_retries_on_failure(
-        self, audio_frame: AudioInputFrame, ctx: PipelineContext
-    ):
+    async def test_retries_on_failure(self, audio_frame: AudioInputFrame, ctx: PipelineContext):
         call_count = 0
 
         class FlakeyProcessor(Processor):
@@ -590,9 +586,7 @@ class TestResilientProcessor:
         assert call_count == 3
 
     @pytest.mark.asyncio
-    async def test_uses_circuit_breaker(
-        self, audio_frame: AudioInputFrame, ctx: PipelineContext
-    ):
+    async def test_uses_circuit_breaker(self, audio_frame: AudioInputFrame, ctx: PipelineContext):
         class FailingProcessor(Processor):
             @property
             def name(self):
@@ -620,9 +614,7 @@ class TestResilientProcessor:
             await resilient.process(audio_frame, ctx)
 
     @pytest.mark.asyncio
-    async def test_fallback_on_failure(
-        self, audio_frame: AudioInputFrame, ctx: PipelineContext
-    ):
+    async def test_fallback_on_failure(self, audio_frame: AudioInputFrame, ctx: PipelineContext):
         class FailingProcessor(Processor):
             @property
             def name(self):

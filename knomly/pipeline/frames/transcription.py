@@ -3,12 +3,13 @@ Transcription frames for Knomly pipeline.
 
 These frames contain the result of speech-to-text processing.
 """
+
 from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .base import Frame
 
@@ -33,13 +34,13 @@ class TranscriptionFrame(Frame):
     detected_language: str = "en"
     language_name: str = "English"
     confidence: float = 0.0
-    words: Optional[List[Dict[str, Any]]] = None
-    sender_phone: Optional[str] = None
+    words: list[dict[str, Any]] | None = None
+    sender_phone: str | None = None
 
     _id: uuid.UUID = field(default_factory=uuid.uuid4, repr=False)
     _created_at: datetime = field(default_factory=datetime.utcnow, repr=False)
-    _metadata: Dict[str, Any] = field(default_factory=dict, repr=False)
-    _source_frame_id: Optional[uuid.UUID] = field(default=None, repr=False)
+    _metadata: dict[str, Any] = field(default_factory=dict, repr=False)
+    _source_frame_id: uuid.UUID | None = field(default=None, repr=False)
 
     @property
     def id(self) -> uuid.UUID:
@@ -50,11 +51,11 @@ class TranscriptionFrame(Frame):
         return self._created_at
 
     @property
-    def metadata(self) -> Dict[str, Any]:
+    def metadata(self) -> dict[str, Any]:
         return self._metadata.copy()
 
     @property
-    def source_frame_id(self) -> Optional[uuid.UUID]:
+    def source_frame_id(self) -> uuid.UUID | None:
         return self._source_frame_id
 
     @property
@@ -76,15 +77,19 @@ class TranscriptionFrame(Frame):
         """Check if transcription meets quality threshold."""
         return self.confidence >= 0.7
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "id": str(self._id),
             "frame_type": self.frame_type,
             "created_at": self._created_at.isoformat(),
             "source_frame_id": str(self._source_frame_id) if self._source_frame_id else None,
             "metadata": self._metadata,
-            "original_text": self.original_text[:200] + "..." if len(self.original_text) > 200 else self.original_text,
-            "english_text": self.english_text[:200] + "..." if len(self.english_text) > 200 else self.english_text,
+            "original_text": self.original_text[:200] + "..."
+            if len(self.original_text) > 200
+            else self.original_text,
+            "english_text": self.english_text[:200] + "..."
+            if len(self.english_text) > 200
+            else self.english_text,
             "detected_language": self.detected_language,
             "language_name": self.language_name,
             "confidence": self.confidence,
@@ -95,10 +100,10 @@ class TranscriptionFrame(Frame):
     @classmethod
     def from_stt_result(
         cls,
-        result: Dict[str, Any],
-        source_frame_id: Optional[uuid.UUID] = None,
-        sender_phone: Optional[str] = None,
-    ) -> "TranscriptionFrame":
+        result: dict[str, Any],
+        source_frame_id: uuid.UUID | None = None,
+        sender_phone: str | None = None,
+    ) -> TranscriptionFrame:
         """
         Factory method to create TranscriptionFrame from STT provider result.
 

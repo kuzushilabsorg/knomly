@@ -3,12 +3,12 @@ Gemini STT Provider for Knomly.
 
 Uses Google's Gemini 2.0 Flash for audio transcription and translation.
 """
+
 from __future__ import annotations
 
 import io
 import json
 import logging
-from typing import Optional
 
 from .base import BaseSTTProvider, TranscriptionResult
 
@@ -108,8 +108,7 @@ class GeminiSTTProvider(BaseSTTProvider):
             return buffer.getvalue(), "audio/mpeg"
         except ImportError:
             raise ImportError(
-                "pydub package is required for audio conversion. "
-                "Install with: pip install pydub"
+                "pydub package is required for audio conversion. " "Install with: pip install pydub"
             )
         except Exception as e:
             logger.error(f"Audio conversion failed: {e}")
@@ -130,7 +129,7 @@ class GeminiSTTProvider(BaseSTTProvider):
         self,
         audio_bytes: bytes,
         mime_type: str = "audio/ogg",
-        language_hint: Optional[str] = None,
+        language_hint: str | None = None,
     ) -> TranscriptionResult:
         """
         Transcribe audio using Gemini.
@@ -145,17 +144,13 @@ class GeminiSTTProvider(BaseSTTProvider):
         """
         try:
             # Convert audio if needed
-            audio_bytes, mime_type = self._convert_audio_if_needed(
-                audio_bytes, mime_type
-            )
+            audio_bytes, mime_type = self._convert_audio_if_needed(audio_bytes, mime_type)
 
             # Get or initialize model
             model = self._get_model()
 
             # Generate transcription
-            response = model.generate_content(
-                [{"mime_type": mime_type, "data": audio_bytes}]
-            )
+            response = model.generate_content([{"mime_type": mime_type, "data": audio_bytes}])
 
             # Parse response
             result = self._parse_response(response.text)

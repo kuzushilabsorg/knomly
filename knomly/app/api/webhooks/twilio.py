@@ -20,17 +20,20 @@ Security:
     Set KNOMLY_TWILIO_AUTH_TOKEN to enable validation.
     Set KNOMLY_SKIP_TWILIO_VALIDATION=true to disable (development only).
 """
+
 from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
-from urllib.parse import urljoin
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from knomly.pipeline import PipelineContext
-from knomly.pipeline.transports import TwilioTransport, get_transport, register_transport
+from knomly.pipeline.transports import get_transport
+
+if TYPE_CHECKING:
+    from knomly.pipeline.frames import AudioInputFrame
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +47,7 @@ TWILIO_AUTH_TOKEN = os.getenv("KNOMLY_TWILIO_AUTH_TOKEN", "")
 SKIP_TWILIO_VALIDATION = os.getenv("KNOMLY_SKIP_TWILIO_VALIDATION", "false").lower() == "true"
 
 
-async def _validate_twilio_signature(request: Request, form_data: Dict[str, Any]) -> bool:
+async def _validate_twilio_signature(request: Request, form_data: dict[str, Any]) -> bool:
     """
     Validate Twilio webhook signature to prevent forged requests.
 
@@ -74,8 +77,7 @@ async def _validate_twilio_signature(request: Request, form_data: Dict[str, Any]
     # Require auth token for validation
     if not TWILIO_AUTH_TOKEN:
         logger.warning(
-            "[SECURITY] KNOMLY_TWILIO_AUTH_TOKEN not set. "
-            "Webhook signature validation disabled."
+            "[SECURITY] KNOMLY_TWILIO_AUTH_TOKEN not set. " "Webhook signature validation disabled."
         )
         return True
 
@@ -111,9 +113,7 @@ async def _validate_twilio_signature(request: Request, form_data: Dict[str, Any]
         is_valid = validator.validate(url, params, signature)
 
         if not is_valid:
-            logger.warning(
-                f"[SECURITY] Invalid Twilio signature for URL: {url[:100]}"
-            )
+            logger.warning(f"[SECURITY] Invalid Twilio signature for URL: {url[:100]}")
             raise HTTPException(status_code=401, detail="Invalid Twilio signature")
 
         logger.debug("[SECURITY] Twilio signature validated successfully")
@@ -121,8 +121,7 @@ async def _validate_twilio_signature(request: Request, form_data: Dict[str, Any]
 
     except ImportError:
         logger.warning(
-            "[SECURITY] twilio package not installed. "
-            "Install with: pip install twilio"
+            "[SECURITY] twilio package not installed. " "Install with: pip install twilio"
         )
         return True
     except HTTPException:
@@ -143,9 +142,9 @@ def _normalize_phone(phone: str) -> str:
 
 
 async def _process_standup_pipeline(
-    initial_frame: "AudioInputFrame",
+    initial_frame: AudioInputFrame,
     channel_id: str,
-    webhook_data: Dict[str, Any],
+    webhook_data: dict[str, Any],
 ) -> None:
     """
     Background task to process standup pipeline.
@@ -170,11 +169,8 @@ async def _process_standup_pipeline(
             get_config_service,
             get_pipeline,
             get_providers,
-            get_resolver,
-            get_user_secrets,
             resolve_tools_for_user,
         )
-        from knomly.pipeline.frames import AudioInputFrame
 
         # Get dependencies
         pipeline = get_pipeline()
@@ -190,7 +186,7 @@ async def _process_standup_pipeline(
         # =================================================================
         # v3: Dynamic Tool Loading via PipelineResolver
         # =================================================================
-        dynamic_tools: List = []
+        dynamic_tools: list = []
 
         if USE_RESOLVER:
             try:
@@ -239,9 +235,7 @@ async def _process_standup_pipeline(
                 f"in {result.duration_ms:.1f}ms"
             )
         else:
-            logger.error(
-                f"Pipeline failed: {str(result.execution_id)[:8]}... - {result.error}"
-            )
+            logger.error(f"Pipeline failed: {str(result.execution_id)[:8]}... - {result.error}")
 
         # Log audit record
         if config_service:
@@ -278,7 +272,7 @@ async def _process_standup_pipeline(
 async def receive_twilio_webhook(
     request: Request,
     background_tasks: BackgroundTasks,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     Receive and process incoming WhatsApp messages via Twilio.
 
@@ -376,12 +370,12 @@ async def receive_twilio_webhook(
 
 
 async def _handle_audio_legacy(
-    form_data: Dict[str, Any],
+    form_data: dict[str, Any],
     sender_phone: str,
     profile_name: str,
-    webhook_data: Dict[str, Any],
+    webhook_data: dict[str, Any],
     background_tasks: BackgroundTasks,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     Legacy audio handling without transport abstraction.
 
@@ -425,7 +419,7 @@ async def _handle_audio_legacy(
         200: {"description": "Status processed"},
     },
 )
-async def receive_twilio_status(request: Request) -> Dict[str, str]:
+async def receive_twilio_status(request: Request) -> dict[str, str]:
     """
     Handle Twilio message delivery status updates.
 
@@ -450,4 +444,4 @@ async def receive_twilio_status(request: Request) -> Dict[str, str]:
 
 # Type hints
 if __name__ != "__main__":
-    from knomly.pipeline.frames import AudioInputFrame
+    pass

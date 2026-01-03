@@ -36,14 +36,13 @@ from __future__ import annotations
 
 import json
 import logging
-from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Literal, Protocol, Sequence
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 from uuid import uuid4
 
 if TYPE_CHECKING:
-    pass
+    from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +74,7 @@ class Message:
     role: MessageRole
     content: str
     id: str = field(default_factory=lambda: str(uuid4()))
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -89,7 +88,7 @@ class Message:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Message":
+    def from_dict(cls, data: dict[str, Any]) -> Message:
         """Create Message from dict."""
         return cls(
             role=data["role"],
@@ -97,7 +96,7 @@ class Message:
             id=data.get("id", str(uuid4())),
             timestamp=datetime.fromisoformat(data["timestamp"])
             if "timestamp" in data
-            else datetime.now(timezone.utc),
+            else datetime.now(UTC),
             metadata=data.get("metadata", {}),
         )
 
@@ -121,14 +120,14 @@ class Conversation:
 
     session_id: str
     messages: list[Message] = field(default_factory=list)
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def add_message(self, message: Message) -> None:
         """Add a message to the conversation."""
         self.messages.append(message)
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dict."""
@@ -141,17 +140,17 @@ class Conversation:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Conversation":
+    def from_dict(cls, data: dict[str, Any]) -> Conversation:
         """Create Conversation from dict."""
         return cls(
             session_id=data["session_id"],
             messages=[Message.from_dict(m) for m in data.get("messages", [])],
             created_at=datetime.fromisoformat(data["created_at"])
             if "created_at" in data
-            else datetime.now(timezone.utc),
+            else datetime.now(UTC),
             updated_at=datetime.fromisoformat(data["updated_at"])
             if "updated_at" in data
-            else datetime.now(timezone.utc),
+            else datetime.now(UTC),
             metadata=data.get("metadata", {}),
         )
 
@@ -407,8 +406,7 @@ class RedisMemory:
                 )
             except ImportError:
                 raise ImportError(
-                    "redis package required for RedisMemory. "
-                    "Install with: pip install redis"
+                    "redis package required for RedisMemory. " "Install with: pip install redis"
                 )
         return self._client
 
@@ -817,45 +815,55 @@ def _serialize_frame(frame: Any) -> dict[str, Any]:
     }
 
     if normalized_type == "tool_call":
-        base.update({
-            "tool_name": frame.tool_name,
-            "tool_arguments": frame.tool_arguments,
-            "reasoning": getattr(frame, "reasoning", ""),
-            "iteration": getattr(frame, "iteration", 0),
-        })
+        base.update(
+            {
+                "tool_name": frame.tool_name,
+                "tool_arguments": frame.tool_arguments,
+                "reasoning": getattr(frame, "reasoning", ""),
+                "iteration": getattr(frame, "iteration", 0),
+            }
+        )
     elif normalized_type == "tool_result":
-        base.update({
-            "tool_name": frame.tool_name,
-            "success": frame.success,
-            "result_text": frame.result_text,
-            "error_message": getattr(frame, "error_message", ""),
-            "execution_time_ms": getattr(frame, "execution_time_ms", 0),
-            "tool_call_frame_id": getattr(frame, "tool_call_frame_id", ""),
-        })
+        base.update(
+            {
+                "tool_name": frame.tool_name,
+                "success": frame.success,
+                "result_text": frame.result_text,
+                "error_message": getattr(frame, "error_message", ""),
+                "execution_time_ms": getattr(frame, "execution_time_ms", 0),
+                "tool_call_frame_id": getattr(frame, "tool_call_frame_id", ""),
+            }
+        )
     elif normalized_type == "agent_response":
-        base.update({
-            "response_text": frame.response_text,
-            "goal_achieved": frame.goal_achieved,
-            "iterations_used": getattr(frame, "iterations_used", 0),
-            "tools_called": list(getattr(frame, "tools_called", ())),
-            "reasoning_trace": getattr(frame, "reasoning_trace", ""),
-        })
+        base.update(
+            {
+                "response_text": frame.response_text,
+                "goal_achieved": frame.goal_achieved,
+                "iterations_used": getattr(frame, "iterations_used", 0),
+                "tools_called": list(getattr(frame, "tools_called", ())),
+                "reasoning_trace": getattr(frame, "reasoning_trace", ""),
+            }
+        )
     elif normalized_type == "plan":
-        base.update({
-            "goal": getattr(frame, "goal", ""),
-            "reasoning": frame.reasoning,
-            "next_action": str(getattr(frame, "next_action", "")),
-            "iteration": getattr(frame, "iteration", 0),
-        })
+        base.update(
+            {
+                "goal": getattr(frame, "goal", ""),
+                "reasoning": frame.reasoning,
+                "next_action": str(getattr(frame, "next_action", "")),
+                "iteration": getattr(frame, "iteration", 0),
+            }
+        )
     elif normalized_type == "transcription":
-        base.update({
-            "original_text": getattr(frame, "original_text", ""),
-            "english_text": getattr(frame, "english_text", ""),
-            "detected_language": getattr(frame, "detected_language", ""),
-            "confidence": getattr(frame, "confidence", 0.0),
-            "sender_phone": getattr(frame, "sender_phone", "") or "",
-            "metadata": getattr(frame, "metadata", {}),
-        })
+        base.update(
+            {
+                "original_text": getattr(frame, "original_text", ""),
+                "english_text": getattr(frame, "english_text", ""),
+                "detected_language": getattr(frame, "detected_language", ""),
+                "confidence": getattr(frame, "confidence", 0.0),
+                "sender_phone": getattr(frame, "sender_phone", "") or "",
+                "metadata": getattr(frame, "metadata", {}),
+            }
+        )
     else:
         # Generic fallback - store what we can
         base["metadata"] = getattr(frame, "metadata", {})
@@ -866,11 +874,11 @@ def _serialize_frame(frame: Any) -> dict[str, Any]:
 def _deserialize_frame(data: dict[str, Any]) -> Any | None:
     """Deserialize a dict back to a Frame object."""
     from knomly.agent.frames import (
+        AgentAction,
         AgentResponseFrame,
         PlanFrame,
         ToolCallFrame,
         ToolResultFrame,
-        AgentAction,
     )
     from knomly.pipeline.frames import TranscriptionFrame
 
@@ -1005,13 +1013,9 @@ class ExecutionMemory:
             if frame is not None:
                 frames.append(frame)
             else:
-                logger.debug(
-                    f"[execution_memory] Could not restore frame from message: {msg.id}"
-                )
+                logger.debug(f"[execution_memory] Could not restore frame from message: {msg.id}")
 
-        logger.info(
-            f"[execution_memory] Restored {len(frames)} frames from session {session_id}"
-        )
+        logger.info(f"[execution_memory] Restored {len(frames)} frames from session {session_id}")
         return frames
 
     async def get_last_state(self, session_id: str) -> dict[str, Any] | None:
@@ -1030,10 +1034,7 @@ class ExecutionMemory:
             return None
 
         # Count iterations (tool_call frames)
-        iterations = sum(
-            1 for m in messages
-            if m.metadata.get("frame_type") == "tool_call"
-        )
+        iterations = sum(1 for m in messages if m.metadata.get("frame_type") == "tool_call")
 
         # Get tools called
         tools_called = [

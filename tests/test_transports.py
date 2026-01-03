@@ -6,9 +6,12 @@ Tests the transport abstraction pattern including:
 - TransportRegistry
 - TwilioTransport implementation
 """
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from knomly.pipeline.frames import AudioInputFrame
 from knomly.pipeline.transports import (
     SendResult,
     TransportAdapter,
@@ -21,8 +24,6 @@ from knomly.pipeline.transports import (
     register_transport,
     reset_transport_registry,
 )
-from knomly.pipeline.frames import AudioInputFrame
-
 
 # =============================================================================
 # SendResult Tests
@@ -311,7 +312,6 @@ class TestTwilioTransport:
         # Mock the twilio import to raise ImportError
         with patch.dict("sys.modules", {"twilio": None, "twilio.rest": None}):
             # Force reimport to trigger ImportError
-            import importlib
             import sys
 
             # Remove cached module
@@ -347,6 +347,7 @@ class TestTwilioTransport:
 
         # Patch sys.modules to mock the import
         import sys
+
         with patch.dict(sys.modules, {"twilio": MagicMock(), "twilio.rest": mock_twilio_rest}):
             result = await transport.send_message("+919876543210", "Test message")
 
@@ -480,6 +481,7 @@ class TestTransportIntegration:
         mock_twilio_rest.Client = mock_client_class
 
         import sys
+
         with patch.dict(sys.modules, {"twilio": MagicMock(), "twilio.rest": mock_twilio_rest}):
             result = await retrieved.send_message(frame.sender_phone, "Confirmation")
 

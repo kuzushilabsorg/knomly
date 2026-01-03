@@ -4,6 +4,7 @@ Confirmation Processor for Knomly.
 Sends confirmation messages back to users via the appropriate transport.
 Transport-agnostic - uses the transport registry to determine how to send.
 """
+
 from __future__ import annotations
 
 import logging
@@ -86,9 +87,9 @@ class ConfirmationProcessor(Processor):
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | None:
         from ..frames import ConfirmationFrame, ErrorFrame, UserResponseFrame, ZulipMessageFrame
 
         # Determine message based on frame type
@@ -142,10 +143,10 @@ class ConfirmationProcessor(Processor):
 
     async def _send_message(
         self,
-        ctx: "PipelineContext",
+        ctx: PipelineContext,
         recipient: str,
         message: str,
-    ) -> "SendResult":
+    ) -> SendResult:
         """
         Send message via appropriate transport.
 
@@ -177,16 +178,14 @@ class ConfirmationProcessor(Processor):
     def _has_legacy_credentials(self) -> bool:
         """Check if legacy credentials are configured."""
         return bool(
-            self._legacy_account_sid
-            and self._legacy_auth_token
-            and self._legacy_from_number
+            self._legacy_account_sid and self._legacy_auth_token and self._legacy_from_number
         )
 
     async def _send_legacy_whatsapp(
         self,
         to_phone: str,
         message: str,
-    ) -> "SendResult":
+    ) -> SendResult:
         """
         Send WhatsApp message via Twilio (legacy mode).
 

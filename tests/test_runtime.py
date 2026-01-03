@@ -8,28 +8,28 @@ Tests for:
 - MemoryDefinitionLoader
 """
 
-import pytest
-import tempfile
 import json
+import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
+from knomly.adapters.schemas import (
+    AgentContext,
+    PipelinePacket,
+    PipelineProviderConfig,
+    ProviderDefinition,
+    SessionContext,
+    ToolDefinition,
+)
 from knomly.runtime import (
-    PipelineResolver,
-    RuntimeBuilder,
     FileDefinitionLoader,
     MemoryDefinitionLoader,
+    PipelineResolver,
+    RuntimeBuilder,
 )
 from knomly.runtime.resolver import InMemoryPipelineCache
-from knomly.adapters.schemas import (
-    ToolDefinition,
-    ProviderDefinition,
-    PipelinePacket,
-    SessionContext,
-    AgentContext,
-    PipelineProviderConfig,
-)
-
 
 # =============================================================================
 # Fixtures

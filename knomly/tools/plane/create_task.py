@@ -64,8 +64,8 @@ class PlaneCreateTaskTool(Tool):
     def __init__(
         self,
         *,
-        client: "PlaneClient",
-        cache: "PlaneEntityCache",
+        client: PlaneClient,
+        cache: PlaneEntityCache,
     ):
         """
         Initialize the tool.
@@ -120,8 +120,7 @@ class PlaneCreateTaskTool(Tool):
                 "assignee": {
                     "type": "string",
                     "description": (
-                        "User to assign the task to (name or email). "
-                        "Leave empty for unassigned."
+                        "User to assign the task to (name or email). " "Leave empty for unassigned."
                     ),
                     "default": "",
                 },
@@ -210,8 +209,7 @@ class PlaneCreateTaskTool(Tool):
             if not project_id:
                 available = list(self._cache.get_project_mapping().keys())[:5]
                 return ToolResult.error(
-                    f"Unknown project: '{project_name}'. "
-                    f"Available projects: {available}"
+                    f"Unknown project: '{project_name}'. " f"Available projects: {available}"
                 )
 
             # Resolve assignee to ID (optional)
@@ -228,9 +226,7 @@ class PlaneCreateTaskTool(Tool):
                     )
 
             # Create the task
-            logger.info(
-                f"[plane_create_task] Creating '{task_name}' in project {project_id}"
-            )
+            logger.info(f"[plane_create_task] Creating '{task_name}' in project {project_id}")
 
             work_item = await self._client.create_work_item(
                 project_id=project_id,
@@ -244,9 +240,7 @@ class PlaneCreateTaskTool(Tool):
             # Build success response
             identifier = f"{work_item.project_identifier}-{work_item.sequence_id}"
 
-            logger.info(
-                f"[plane_create_task] Created task {identifier} (ID: {work_item.id})"
-            )
+            logger.info(f"[plane_create_task] Created task {identifier} (ID: {work_item.id})")
 
             return ToolResult.success(
                 text=(

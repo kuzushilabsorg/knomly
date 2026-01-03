@@ -237,7 +237,7 @@ class ToolDefinition(BaseModel):
         properties: dict[str, Any],
         required: list[str] | None = None,
         **kwargs: Any,
-    ) -> "ToolDefinition":
+    ) -> ToolDefinition:
         """
         Create from Pipecat-style function schema.
 
@@ -276,7 +276,7 @@ class ToolDefinition(BaseModel):
         base_url: str | None = None,
         auth_type: str = "bearer",
         auth_secret_key: str = "api_key",
-    ) -> "ToolDefinition":
+    ) -> ToolDefinition:
         """
         Create from parsed OpenAPI operation.
 

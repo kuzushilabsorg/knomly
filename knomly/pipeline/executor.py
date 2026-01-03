@@ -6,18 +6,20 @@ Adapted from Pipecat patterns for HTTP request/response context.
 
 See ADR-001 for design decisions.
 """
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Sequence
-from uuid import uuid4
+from typing import TYPE_CHECKING
 
 from .context import PipelineContext, PipelineResult
 from .frames import ErrorFrame, Frame
 from .routing import PipelineExit
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from .processor import Processor
 
 logger = logging.getLogger(__name__)
@@ -48,7 +50,7 @@ class Pipeline:
         )
     """
 
-    def __init__(self, processors: list["Processor"]):
+    def __init__(self, processors: list[Processor]):
         """
         Initialize pipeline with ordered list of processors.
 
@@ -163,7 +165,7 @@ class Pipeline:
 
     def _normalize_output(
         self,
-        output: "Frame | Sequence[Frame] | None",
+        output: Frame | Sequence[Frame] | None,
     ) -> list[Frame]:
         """Normalize processor output to list of frames."""
         if output is None:
@@ -190,14 +192,14 @@ class PipelineBuilder:
     """
 
     def __init__(self) -> None:
-        self._processors: list["Processor"] = []
+        self._processors: list[Processor] = []
 
-    def add(self, processor: "Processor") -> "PipelineBuilder":
+    def add(self, processor: Processor) -> PipelineBuilder:
         """Add a processor to the pipeline."""
         self._processors.append(processor)
         return self
 
-    def add_if(self, condition: bool, processor: "Processor") -> "PipelineBuilder":
+    def add_if(self, condition: bool, processor: Processor) -> PipelineBuilder:
         """Conditionally add a processor."""
         if condition:
             self._processors.append(processor)

@@ -63,7 +63,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from .base import ServiceRegistry, DictServiceRegistry
+from .base import DictServiceRegistry, ServiceRegistry
 
 if TYPE_CHECKING:
     from .schemas import ProviderDefinition
@@ -185,7 +185,7 @@ class GenericServiceFactory:
 
     def create_service(
         self,
-        definition: "ProviderDefinition",
+        definition: ProviderDefinition,
         secrets: dict[str, str] | None = None,
         **extra_kwargs: Any,
     ) -> Any | None:
@@ -257,7 +257,7 @@ class GenericServiceFactory:
     def _build_constructor_args(
         self,
         config: dict[str, Any],
-        definition: "ProviderDefinition",
+        definition: ProviderDefinition,
         secrets: dict[str, str],
     ) -> dict[str, Any]:
         """
@@ -289,6 +289,7 @@ class GenericServiceFactory:
                     env_var = auth_config.get("env_var")
                     if env_var:
                         import os
+
                         auth_value = os.getenv(env_var)
 
                 if auth_value:
@@ -310,9 +311,7 @@ class GenericServiceFactory:
                 params_instance = params_class(**params_data)
                 constructor_args[params_arg] = params_instance
             except Exception as e:
-                logger.warning(
-                    f"[service_factory] Failed to create params: {e}"
-                )
+                logger.warning(f"[service_factory] Failed to create params: {e}")
                 # Fall back to passing params directly
                 constructor_args.update(params_data)
         else:
@@ -351,51 +350,53 @@ def create_knomly_service_registry() -> DictServiceRegistry:
         Configured DictServiceRegistry
     """
     # Import providers lazily to avoid circular imports
+    from knomly.providers.chat.zulip import ZulipChatProvider
+    from knomly.providers.llm.gemini import GeminiLLMProvider
+    from knomly.providers.llm.openai import OpenAILLMProvider
     from knomly.providers.stt.deepgram import DeepgramSTTProvider
     from knomly.providers.stt.gemini import GeminiSTTProvider
     from knomly.providers.stt.whisper import WhisperSTTProvider
-    from knomly.providers.llm.openai import OpenAILLMProvider
-    from knomly.providers.llm.gemini import GeminiLLMProvider
-    from knomly.providers.chat.zulip import ZulipChatProvider
 
-    return DictServiceRegistry({
-        "stt": {
-            "deepgram": {
-                "class": DeepgramSTTProvider,
-                "auth": {"arg": "api_key", "env_var": "DEEPGRAM_API_KEY"},
-                "direct_args": ["model", "language"],
+    return DictServiceRegistry(
+        {
+            "stt": {
+                "deepgram": {
+                    "class": DeepgramSTTProvider,
+                    "auth": {"arg": "api_key", "env_var": "DEEPGRAM_API_KEY"},
+                    "direct_args": ["model", "language"],
+                },
+                "gemini": {
+                    "class": GeminiSTTProvider,
+                    "auth": {"arg": "api_key", "env_var": "GEMINI_API_KEY"},
+                    "direct_args": ["model", "language"],
+                },
+                "whisper": {
+                    "class": WhisperSTTProvider,
+                    "auth": {"arg": "api_key", "env_var": "OPENAI_API_KEY"},
+                    "direct_args": ["model", "language"],
+                },
             },
-            "gemini": {
-                "class": GeminiSTTProvider,
-                "auth": {"arg": "api_key", "env_var": "GEMINI_API_KEY"},
-                "direct_args": ["model", "language"],
+            "llm": {
+                "openai": {
+                    "class": OpenAILLMProvider,
+                    "auth": {"arg": "api_key", "env_var": "OPENAI_API_KEY"},
+                    "direct_args": ["model", "temperature", "max_tokens"],
+                },
+                "gemini": {
+                    "class": GeminiLLMProvider,
+                    "auth": {"arg": "api_key", "env_var": "GEMINI_API_KEY"},
+                    "direct_args": ["model", "temperature", "max_tokens"],
+                },
             },
-            "whisper": {
-                "class": WhisperSTTProvider,
-                "auth": {"arg": "api_key", "env_var": "OPENAI_API_KEY"},
-                "direct_args": ["model", "language"],
+            "chat": {
+                "zulip": {
+                    "class": ZulipChatProvider,
+                    "auth": {"arg": "api_key"},
+                    "direct_args": ["email", "site"],
+                },
             },
-        },
-        "llm": {
-            "openai": {
-                "class": OpenAILLMProvider,
-                "auth": {"arg": "api_key", "env_var": "OPENAI_API_KEY"},
-                "direct_args": ["model", "temperature", "max_tokens"],
-            },
-            "gemini": {
-                "class": GeminiLLMProvider,
-                "auth": {"arg": "api_key", "env_var": "GEMINI_API_KEY"},
-                "direct_args": ["model", "temperature", "max_tokens"],
-            },
-        },
-        "chat": {
-            "zulip": {
-                "class": ZulipChatProvider,
-                "auth": {"arg": "api_key"},
-                "direct_args": ["email", "site"],
-            },
-        },
-    })
+        }
+    )
 
 
 def create_knomly_service_factory() -> GenericServiceFactory:

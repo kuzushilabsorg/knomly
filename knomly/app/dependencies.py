@@ -14,6 +14,7 @@ Thread Safety:
     Global instances are protected by locks to prevent race conditions
     during concurrent initialization (e.g., multiple webhook requests).
 """
+
 from __future__ import annotations
 
 import logging
@@ -21,16 +22,19 @@ import os
 import threading
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING
 
 from knomly.config import ConfigurationService
 from knomly.config.schemas import AppSettings
-from knomly.pipeline import Pipeline
 from knomly.pipeline.builder import create_standup_pipeline
 from knomly.providers import ProviderRegistry
 from knomly.providers.chat.zulip import ZulipChatProvider
 from knomly.providers.llm.openai import AnthropicLLMProvider, OpenAILLMProvider
 from knomly.providers.stt.gemini import GeminiSTTProvider
+
+if TYPE_CHECKING:
+    from knomly.pipeline import Pipeline
+    from knomly.runtime import PipelineResolver
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +45,7 @@ _pipeline_lock = threading.Lock()
 _resolver_lock = threading.Lock()
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> AppSettings:
     """
     Get application settings from environment.
@@ -76,9 +80,9 @@ def get_settings() -> AppSettings:
 
 
 # Global instances (initialized on first access)
-_providers: Optional[ProviderRegistry] = None
-_config_service: Optional[ConfigurationService] = None
-_pipeline: Optional[Pipeline] = None
+_providers: ProviderRegistry | None = None
+_config_service: ConfigurationService | None = None
+_pipeline: Pipeline | None = None
 
 
 def get_providers() -> ProviderRegistry:
@@ -118,7 +122,9 @@ def get_providers() -> ProviderRegistry:
                 "openai",
                 OpenAILLMProvider(api_key=openai_key),
             )
-        anthropic_key = settings.anthropic_api_key.get_secret_value() if settings.anthropic_api_key else ""
+        anthropic_key = (
+            settings.anthropic_api_key.get_secret_value() if settings.anthropic_api_key else ""
+        )
         if anthropic_key:
             registry.register_llm(
                 "anthropic",
@@ -236,10 +242,10 @@ async def shutdown_services() -> None:
 # =============================================================================
 
 # Global resolver instance
-_resolver: Optional["PipelineResolver"] = None
+_resolver: PipelineResolver | None = None
 
 
-def get_resolver() -> "PipelineResolver":
+def get_resolver() -> PipelineResolver:
     """
     Get the PipelineResolver for dynamic configuration.
 
@@ -268,12 +274,12 @@ def get_resolver() -> "PipelineResolver":
         if _resolver is not None:
             return _resolver
 
-        from knomly.runtime import PipelineResolver, FileDefinitionLoader, MemoryDefinitionLoader
         from knomly.adapters.base import ToolBuilder
         from knomly.adapters.openapi_adapter import OpenAPIToolAdapter
         from knomly.adapters.service_factory import create_knomly_service_factory
+        from knomly.runtime import FileDefinitionLoader, MemoryDefinitionLoader, PipelineResolver
 
-        settings = get_settings()
+        get_settings()
 
         # Determine loader based on environment
         config_dir = os.getenv("KNOMLY_CONFIG_DIR", "config")
@@ -398,4 +404,4 @@ async def resolve_tools_for_user(user_id: str) -> list:
 
 # Type hint for forward reference
 if True:  # Avoid circular import at module level
-    from knomly.runtime import PipelineResolver
+    pass

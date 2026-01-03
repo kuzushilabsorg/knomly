@@ -48,14 +48,13 @@ Usage:
 from __future__ import annotations
 
 import logging
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Protocol, Sequence, runtime_checkable
-
-from .base import Tool
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    pass
+    from collections.abc import Sequence
+
+    from .base import Tool
 
 logger = logging.getLogger(__name__)
 
@@ -225,7 +224,7 @@ class CompositeToolFactory:
         """
         self._factories = list(factories)
 
-    def add_factory(self, factory: ToolFactory) -> "CompositeToolFactory":
+    def add_factory(self, factory: ToolFactory) -> CompositeToolFactory:
         """Add a factory. Returns self for chaining."""
         self._factories.append(factory)
         return self
@@ -329,11 +328,7 @@ def extract_tool_context_from_frame(
     """
     metadata = getattr(frame, "metadata", {}) or {}
 
-    user_id = (
-        metadata.get("user_id")
-        or getattr(frame, "sender_phone", None)
-        or "anonymous"
-    )
+    user_id = metadata.get("user_id") or getattr(frame, "sender_phone", None) or "anonymous"
 
     # SECURITY: Never extract secrets from frame metadata
     # Use the secret_provider callback instead
@@ -391,11 +386,7 @@ async def extract_tool_context_with_vault(
     """
     metadata = getattr(frame, "metadata", {}) or {}
 
-    user_id = (
-        metadata.get("user_id")
-        or getattr(frame, "sender_phone", None)
-        or "anonymous"
-    )
+    user_id = metadata.get("user_id") or getattr(frame, "sender_phone", None) or "anonymous"
 
     # Fetch secrets from vault
     secrets = await vault_client.get_secrets_for_user(user_id)
@@ -403,9 +394,5 @@ async def extract_tool_context_with_vault(
     return ToolContext(
         user_id=user_id,
         secrets=secrets,
-        metadata={
-            k: v
-            for k, v in metadata.items()
-            if k not in ("user_id", "secrets")
-        },
+        metadata={k: v for k, v in metadata.items() if k not in ("user_id", "secrets")},
     )

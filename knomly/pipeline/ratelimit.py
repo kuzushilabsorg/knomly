@@ -12,12 +12,12 @@ Design Philosophy:
 
 See ADR-001 for design decisions.
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
 import time
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -230,14 +230,12 @@ class RateLimiter:
         if bucket.consume(cost):
             await self.storage.set(key, bucket)
             logger.debug(
-                f"Rate limit acquired: key={key}, cost={cost}, "
-                f"remaining={bucket.tokens:.1f}"
+                f"Rate limit acquired: key={key}, cost={cost}, " f"remaining={bucket.tokens:.1f}"
             )
             return True
         else:
             logger.debug(
-                f"Rate limit exceeded: key={key}, cost={cost}, "
-                f"tokens={bucket.tokens:.1f}"
+                f"Rate limit exceeded: key={key}, cost={cost}, " f"tokens={bucket.tokens:.1f}"
             )
             return False
 
@@ -276,9 +274,7 @@ class RateLimiter:
                 if elapsed + wait_time > timeout:
                     return False
 
-            logger.debug(
-                f"Rate limit waiting: key={key}, wait={wait_time:.2f}s"
-            )
+            logger.debug(f"Rate limit waiting: key={key}, wait={wait_time:.2f}s")
             await asyncio.sleep(min(wait_time, 1.0))  # Check every second max
 
     async def check(self, key: str, cost: float = 1.0) -> tuple[bool, float]:
@@ -333,11 +329,9 @@ class SlidingWindowEntry:
 class SlidingWindowStorage(Protocol):
     """Storage protocol for sliding window limiter."""
 
-    async def get(self, key: str) -> SlidingWindowEntry | None:
-        ...
+    async def get(self, key: str) -> SlidingWindowEntry | None: ...
 
-    async def set(self, key: str, entry: SlidingWindowEntry) -> None:
-        ...
+    async def set(self, key: str, entry: SlidingWindowEntry) -> None: ...
 
 
 @dataclass
@@ -470,27 +464,26 @@ def rate_limited(
     def decorator(func):
         async def wrapper(*args, **kwargs):
             # Resolve key
-            if callable(key_func):
-                key = key_func(*args, **kwargs)
-            else:
-                key = key_func
+            key = key_func(*args, **kwargs) if callable(key_func) else key_func
 
             # Apply rate limit
             if block:
-                success = await limiter.wait(key, cost if hasattr(limiter, 'wait') and cost else 1.0, timeout)
+                success = await limiter.wait(
+                    key, cost if hasattr(limiter, "wait") and cost else 1.0, timeout
+                )
                 if not success:
                     raise RateLimitExceeded(
                         key=key,
-                        limit=getattr(limiter, 'rate', getattr(limiter, 'max_requests', 0)),
-                        window=getattr(limiter, 'window_seconds', 1.0),
+                        limit=getattr(limiter, "rate", getattr(limiter, "max_requests", 0)),
+                        window=getattr(limiter, "window_seconds", 1.0),
                     )
             else:
-                success = await limiter.acquire(key, cost if hasattr(limiter, 'acquire') else 1.0)
+                success = await limiter.acquire(key, cost if hasattr(limiter, "acquire") else 1.0)
                 if not success:
                     raise RateLimitExceeded(
                         key=key,
-                        limit=getattr(limiter, 'rate', getattr(limiter, 'max_requests', 0)),
-                        window=getattr(limiter, 'window_seconds', 1.0),
+                        limit=getattr(limiter, "rate", getattr(limiter, "max_requests", 0)),
+                        window=getattr(limiter, "window_seconds", 1.0),
                     )
 
             return await func(*args, **kwargs)
@@ -552,19 +545,19 @@ class CompositeRateLimiter:
 # =============================================================================
 
 __all__ = [
+    "CompositeRateLimiter",
+    "InMemorySlidingWindowStorage",
+    "InMemoryStorage",
     # Exceptions
     "RateLimitExceeded",
-    # Core types
-    "TokenBucket",
     "RateLimitStorage",
-    "InMemoryStorage",
     # Rate limiters
     "RateLimiter",
-    "SlidingWindowLimiter",
     "SlidingWindowEntry",
+    "SlidingWindowLimiter",
     "SlidingWindowStorage",
-    "InMemorySlidingWindowStorage",
-    "CompositeRateLimiter",
+    # Core types
+    "TokenBucket",
     # Decorator
     "rate_limited",
 ]

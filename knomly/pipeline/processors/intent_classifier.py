@@ -4,6 +4,7 @@ Intent Classifier Processor for Knomly.
 Classifies the intent of transcribed voice messages to route
 to appropriate downstream processors.
 """
+
 from __future__ import annotations
 
 import json
@@ -90,9 +91,9 @@ class IntentClassifierProcessor(Processor):
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | None:
         from ..frames import TranscriptionFrame
 
         if not isinstance(frame, TranscriptionFrame):
@@ -178,7 +179,7 @@ class IntentClassifierProcessor(Processor):
 
 
 # Convenience function for key extraction in Switch router
-def get_intent(frame: "Frame", ctx: "PipelineContext") -> str:
+def get_intent(frame: Frame, ctx: PipelineContext) -> str:
     """
     Extract intent from frame metadata for use with Switch router.
 

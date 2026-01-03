@@ -76,8 +76,7 @@ class ToolRegistry:
         """
         if tool.name in self._tools:
             raise ToolRegistryError(
-                f"Tool '{tool.name}' already registered. "
-                f"Use a unique name or unregister first."
+                f"Tool '{tool.name}' already registered. " f"Use a unique name or unregister first."
             )
 
         # Validate tool has required properties
@@ -130,9 +129,7 @@ class ToolRegistry:
         tool = self._tools.get(name)
         if tool is None:
             available = list(self._tools.keys())
-            raise ToolRegistryError(
-                f"Tool '{name}' not found. Available tools: {available}"
-            )
+            raise ToolRegistryError(f"Tool '{name}' not found. Available tools: {available}")
         return tool
 
     def list_tools(self) -> list[Tool]:
@@ -184,26 +181,18 @@ class ToolRegistry:
 
         # Check description
         if not tool.description or not isinstance(tool.description, str):
-            raise ToolRegistryError(
-                f"Tool '{tool.name}' must have a description"
-            )
+            raise ToolRegistryError(f"Tool '{tool.name}' must have a description")
 
         # Check input_schema is a valid JSON Schema object
         schema = tool.input_schema
         if not isinstance(schema, dict):
-            raise ToolRegistryError(
-                f"Tool '{tool.name}' input_schema must be a dict"
-            )
+            raise ToolRegistryError(f"Tool '{tool.name}' input_schema must be a dict")
 
         if schema.get("type") != "object":
-            raise ToolRegistryError(
-                f"Tool '{tool.name}' input_schema must have type: 'object'"
-            )
+            raise ToolRegistryError(f"Tool '{tool.name}' input_schema must have type: 'object'")
 
         if "properties" not in schema:
-            raise ToolRegistryError(
-                f"Tool '{tool.name}' input_schema must have 'properties'"
-            )
+            raise ToolRegistryError(f"Tool '{tool.name}' input_schema must have 'properties'")
 
     def __len__(self) -> int:
         return len(self._tools)

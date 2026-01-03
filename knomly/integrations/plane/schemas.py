@@ -10,10 +10,8 @@ from __future__ import annotations
 from datetime import datetime
 from enum import Enum
 from typing import Any
-from uuid import UUID
 
-from pydantic import BaseModel, Field, ConfigDict
-
+from pydantic import BaseModel, ConfigDict, Field
 
 # =============================================================================
 # Enums
@@ -30,7 +28,7 @@ class WorkItemPriority(str, Enum):
     NONE = "none"
 
     @classmethod
-    def from_string(cls, value: str) -> "WorkItemPriority":
+    def from_string(cls, value: str) -> WorkItemPriority:
         """Convert string to priority, with fallback."""
         try:
             return cls(value.lower())
@@ -77,7 +75,11 @@ class WorkItemCreate(BaseModel):
         if self.description_html:
             data["description_html"] = self.description_html
         if self.priority:
-            data["priority"] = self.priority.value if isinstance(self.priority, WorkItemPriority) else self.priority
+            data["priority"] = (
+                self.priority.value
+                if isinstance(self.priority, WorkItemPriority)
+                else self.priority
+            )
         if self.state_id:
             data["state_id"] = self.state_id
         if self.assignees:
@@ -140,7 +142,9 @@ class WorkItemQuery(BaseModel):
         if self.state_id:
             params["state_id"] = self.state_id
         if self.priority:
-            params["priority"] = self.priority.value if isinstance(self.priority, Enum) else self.priority
+            params["priority"] = (
+                self.priority.value if isinstance(self.priority, Enum) else self.priority
+            )
         if self.assignee_id:
             params["assignee_id"] = self.assignee_id
         if self.label_id:

@@ -3,8 +3,7 @@ Tests for Knomly Pipeline Processors.
 
 Tests each processor in isolation with mock providers.
 """
-import asyncio
-from dataclasses import dataclass
+
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -31,7 +30,6 @@ from knomly.pipeline.processors import (
 from knomly.providers import TranscriptionResult
 from knomly.providers.chat import MessageResult
 from knomly.providers.llm import LLMResponse
-
 
 # =============================================================================
 # Mock Providers
@@ -396,9 +394,7 @@ class TestExtractionProcessor:
         assert processor.name == "extraction"
 
     @pytest.mark.asyncio
-    async def test_passes_through_non_transcription_frame(
-        self, processor, ctx_with_providers
-    ):
+    async def test_passes_through_non_transcription_frame(self, processor, ctx_with_providers):
         frame = Frame()
 
         result = await processor.process(frame, ctx_with_providers)
@@ -485,9 +481,7 @@ class TestZulipProcessor:
         assert processor.name == "zulip"
 
     @pytest.mark.asyncio
-    async def test_passes_through_non_extraction_frame(
-        self, processor, ctx_with_providers
-    ):
+    async def test_passes_through_non_extraction_frame(self, processor, ctx_with_providers):
         frame = Frame()
 
         result = await processor.process(frame, ctx_with_providers)

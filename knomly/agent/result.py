@@ -24,11 +24,12 @@ Usage:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from knomly.pipeline.frames.base import Frame
+
     from .frames import AgentResponseFrame
 
 
@@ -66,10 +67,10 @@ class AgentResult:
     success: bool
 
     # Final response frame (present if success=True)
-    response: "AgentResponseFrame | None" = None
+    response: AgentResponseFrame | None = None
 
     # Complete frame stream (for audit/replay)
-    frames: tuple["Frame", ...] = ()
+    frames: tuple[Frame, ...] = ()
 
     # How many iterations were used
     iterations: int = 0
@@ -124,8 +125,8 @@ class AgentResult:
 
 
 def success_result(
-    response: "AgentResponseFrame",
-    frames: tuple["Frame", ...],
+    response: AgentResponseFrame,
+    frames: tuple[Frame, ...],
     *,
     iterations: int = 0,
     tools_called: tuple[str, ...] = (),
@@ -150,13 +151,13 @@ def success_result(
         frames=frames,
         iterations=iterations,
         tools_called=tools_called,
-        started_at=started_at or datetime.now(timezone.utc),
-        completed_at=datetime.now(timezone.utc),
+        started_at=started_at or datetime.now(UTC),
+        completed_at=datetime.now(UTC),
     )
 
 
 def timeout_result(
-    frames: tuple["Frame", ...],
+    frames: tuple[Frame, ...],
     *,
     iterations: int = 0,
     tools_called: tuple[str, ...] = (),
@@ -181,15 +182,15 @@ def timeout_result(
         frames=frames,
         iterations=iterations,
         tools_called=tools_called,
-        started_at=started_at or datetime.now(timezone.utc),
-        completed_at=datetime.now(timezone.utc),
+        started_at=started_at or datetime.now(UTC),
+        completed_at=datetime.now(UTC),
         error_message=f"Agent execution timed out after {timeout_seconds}s",
         error_type="timeout",
     )
 
 
 def max_iterations_result(
-    frames: tuple["Frame", ...],
+    frames: tuple[Frame, ...],
     *,
     max_iterations: int = 5,
     tools_called: tuple[str, ...] = (),
@@ -212,8 +213,8 @@ def max_iterations_result(
         frames=frames,
         iterations=max_iterations,
         tools_called=tools_called,
-        started_at=started_at or datetime.now(timezone.utc),
-        completed_at=datetime.now(timezone.utc),
+        started_at=started_at or datetime.now(UTC),
+        completed_at=datetime.now(UTC),
         error_message=f"Agent reached maximum iterations ({max_iterations})",
         error_type="max_iterations",
     )
@@ -221,7 +222,7 @@ def max_iterations_result(
 
 def error_result(
     error: Exception,
-    frames: tuple["Frame", ...],
+    frames: tuple[Frame, ...],
     *,
     iterations: int = 0,
     tools_called: tuple[str, ...] = (),
@@ -245,8 +246,8 @@ def error_result(
         frames=frames,
         iterations=iterations,
         tools_called=tools_called,
-        started_at=started_at or datetime.now(timezone.utc),
-        completed_at=datetime.now(timezone.utc),
+        started_at=started_at or datetime.now(UTC),
+        completed_at=datetime.now(UTC),
         error_message=str(error),
         error_type="unexpected",
     )

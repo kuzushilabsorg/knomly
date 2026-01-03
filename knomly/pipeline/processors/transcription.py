@@ -3,6 +3,7 @@ Transcription Processor for Knomly.
 
 Converts audio to text using STT providers.
 """
+
 from __future__ import annotations
 
 import logging
@@ -40,9 +41,9 @@ class TranscriptionProcessor(Processor):
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | None:
         from ..frames import AudioInputFrame, TranscriptionFrame
 
         if not isinstance(frame, AudioInputFrame):

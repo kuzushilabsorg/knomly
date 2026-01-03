@@ -3,13 +3,13 @@ Action frames for Knomly pipeline.
 
 These frames represent completed actions or results from external systems.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
 
 from .base import Frame
-
 
 # =============================================================================
 # User Response Frame (Generic)
@@ -43,12 +43,14 @@ class UserResponseFrame(Frame):
 
     def to_dict(self) -> dict[str, Any]:
         base = Frame.to_dict(self)
-        base.update({
-            "message": self.message[:100] + "..." if len(self.message) > 100 else self.message,
-            "sender_phone": self.sender_phone,
-            "success": self.success,
-            "error": self.error,
-        })
+        base.update(
+            {
+                "message": self.message[:100] + "..." if len(self.message) > 100 else self.message,
+                "sender_phone": self.sender_phone,
+                "success": self.success,
+                "error": self.error,
+            }
+        )
         return base
 
 
@@ -88,15 +90,17 @@ class ZulipMessageFrame(Frame):
 
     def to_dict(self) -> dict[str, Any]:
         base = Frame.to_dict(self)
-        base.update({
-            "stream": self.stream,
-            "topic": self.topic,
-            "content_length": len(self.content),
-            "message_id": self.message_id,
-            "success": self.success,
-            "error": self.error,
-            "sender_phone": self.sender_phone,
-        })
+        base.update(
+            {
+                "stream": self.stream,
+                "topic": self.topic,
+                "content_length": len(self.content),
+                "message_id": self.message_id,
+                "success": self.success,
+                "error": self.error,
+                "sender_phone": self.sender_phone,
+            }
+        )
         return base
 
 
@@ -121,11 +125,13 @@ class ConfirmationFrame(Frame):
 
     def to_dict(self) -> dict[str, Any]:
         base = Frame.to_dict(self)
-        base.update({
-            "recipient_phone": self.recipient_phone,
-            "message": self.message[:100] + "..." if len(self.message) > 100 else self.message,
-            "message_sid": self.message_sid,
-            "success": self.success,
-            "error": self.error,
-        })
+        base.update(
+            {
+                "recipient_phone": self.recipient_phone,
+                "message": self.message[:100] + "..." if len(self.message) > 100 else self.message,
+                "message_sid": self.message_sid,
+                "success": self.success,
+                "error": self.error,
+            }
+        )
         return base

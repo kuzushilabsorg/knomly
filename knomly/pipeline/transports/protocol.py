@@ -8,6 +8,7 @@ This abstraction enables the framework to support multiple messaging
 platforms (WhatsApp/Twilio, Telegram, Slack, etc.) without changing
 core pipeline logic.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -85,9 +86,9 @@ class TransportAdapter(Protocol):
 
     async def normalize_request(
         self,
-        request: "Request",
+        request: Request,
         form_data: dict[str, Any] | None = None,
-    ) -> "AudioInputFrame":
+    ) -> AudioInputFrame:
         """
         Convert incoming webhook request to AudioInputFrame.
 

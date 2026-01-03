@@ -249,7 +249,7 @@ class FileDefinitionLoader:
     def _load_json(self, path: Path) -> Any:
         """Load JSON file."""
         try:
-            with open(path, "r") as f:
+            with path.open() as f:
                 return json.load(f)
         except Exception as e:
             logger.error(f"[file_loader] Failed to load {path}: {e}")

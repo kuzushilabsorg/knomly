@@ -8,12 +8,12 @@ This example demonstrates the basic pipeline pattern:
 
 Run: python -m examples.01-simple-pipeline.main
 """
+
 import asyncio
 from dataclasses import dataclass
 
-from knomly import Pipeline, PipelineBuilder, PipelineContext, Processor
+from knomly import PipelineBuilder, PipelineContext, Processor
 from knomly.pipeline.frames import Frame
-
 
 # =============================================================================
 # Custom Frames
@@ -23,12 +23,14 @@ from knomly.pipeline.frames import Frame
 @dataclass(frozen=True, kw_only=True, slots=True)
 class TextFrame(Frame):
     """Simple text frame."""
+
     text: str = ""
 
 
 @dataclass(frozen=True, kw_only=True, slots=True)
 class UppercaseFrame(Frame):
     """Frame with uppercase text."""
+
     text: str = ""
     original: str = ""
 
@@ -36,6 +38,7 @@ class UppercaseFrame(Frame):
 @dataclass(frozen=True, kw_only=True, slots=True)
 class CountFrame(Frame):
     """Frame with word count."""
+
     text: str = ""
     word_count: int = 0
 
@@ -89,12 +92,7 @@ class WordCountProcessor(Processor):
 
 async def main():
     # Build pipeline
-    pipeline = (
-        PipelineBuilder()
-        .add(UppercaseProcessor())
-        .add(WordCountProcessor())
-        .build()
-    )
+    pipeline = PipelineBuilder().add(UppercaseProcessor()).add(WordCountProcessor()).build()
 
     print(f"Pipeline: {pipeline}")
     print(f"Processors: {pipeline.processor_names}")

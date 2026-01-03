@@ -10,19 +10,18 @@ Tests cover:
 """
 
 import json
-import pytest
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from knomly.agent.memory import (
-    Message,
     Conversation,
     InMemoryStorage,
-    RedisMemory,
     MemoryManager,
+    Message,
+    RedisMemory,
     create_memory,
 )
-
 
 # =============================================================================
 # Message Tests
@@ -399,9 +398,7 @@ class TestRedisMemory:
         # Mock existing conversation
         existing_conv = Conversation(session_id="session-1")
         existing_conv.add_message(Message(role="user", content="Previous"))
-        mock_redis_client.get = AsyncMock(
-            return_value=json.dumps(existing_conv.to_dict())
-        )
+        mock_redis_client.get = AsyncMock(return_value=json.dumps(existing_conv.to_dict()))
 
         with patch("redis.asyncio.from_url", return_value=mock_redis_client):
             memory = RedisMemory()
@@ -419,9 +416,7 @@ class TestRedisMemory:
         """Get messages from session."""
         conv = Conversation(session_id="session-1")
         conv.add_message(Message(role="user", content="Hello!"))
-        mock_redis_client.get = AsyncMock(
-            return_value=json.dumps(conv.to_dict())
-        )
+        mock_redis_client.get = AsyncMock(return_value=json.dumps(conv.to_dict()))
 
         with patch("redis.asyncio.from_url", return_value=mock_redis_client):
             memory = RedisMemory()
@@ -727,8 +722,8 @@ class TestFrameToMessage:
 
     def test_tool_call_frame(self):
         """Convert ToolCallFrame to message."""
-        from knomly.agent.memory import frame_to_message
         from knomly.agent.frames import ToolCallFrame
+        from knomly.agent.memory import frame_to_message
 
         frame = ToolCallFrame(
             tool_name="plane_create_task",
@@ -747,8 +742,8 @@ class TestFrameToMessage:
 
     def test_tool_result_frame_success(self):
         """Convert successful ToolResultFrame to message."""
-        from knomly.agent.memory import frame_to_message
         from knomly.agent.frames import ToolResultFrame
+        from knomly.agent.memory import frame_to_message
 
         frame = ToolResultFrame(
             tool_name="plane_create_task",
@@ -765,8 +760,8 @@ class TestFrameToMessage:
 
     def test_tool_result_frame_failure(self):
         """Convert failed ToolResultFrame to message."""
-        from knomly.agent.memory import frame_to_message
         from knomly.agent.frames import ToolResultFrame
+        from knomly.agent.memory import frame_to_message
 
         frame = ToolResultFrame(
             tool_name="plane_create_task",
@@ -783,8 +778,8 @@ class TestFrameToMessage:
 
     def test_agent_response_frame(self):
         """Convert AgentResponseFrame to message."""
-        from knomly.agent.memory import frame_to_message
         from knomly.agent.frames import AgentResponseFrame
+        from knomly.agent.memory import frame_to_message
 
         frame = AgentResponseFrame(
             response_text="Task created successfully!",
@@ -800,8 +795,8 @@ class TestFrameToMessage:
 
     def test_plan_frame(self):
         """Convert PlanFrame to message."""
+        from knomly.agent.frames import AgentAction, PlanFrame
         from knomly.agent.memory import frame_to_message
-        from knomly.agent.frames import PlanFrame, AgentAction
 
         frame = PlanFrame(
             goal="Create a task",
@@ -840,8 +835,8 @@ class TestMessageToFrame:
 
     def test_restore_tool_call_frame(self):
         """Restore ToolCallFrame from message."""
-        from knomly.agent.memory import frame_to_message, message_to_frame
         from knomly.agent.frames import ToolCallFrame
+        from knomly.agent.memory import frame_to_message, message_to_frame
 
         original = ToolCallFrame(
             tool_name="plane_create_task",
@@ -859,8 +854,8 @@ class TestMessageToFrame:
 
     def test_restore_tool_result_frame(self):
         """Restore ToolResultFrame from message."""
-        from knomly.agent.memory import frame_to_message, message_to_frame
         from knomly.agent.frames import ToolResultFrame
+        from knomly.agent.memory import frame_to_message, message_to_frame
 
         original = ToolResultFrame(
             tool_name="plane_create_task",
@@ -879,8 +874,8 @@ class TestMessageToFrame:
 
     def test_restore_agent_response_frame(self):
         """Restore AgentResponseFrame from message."""
-        from knomly.agent.memory import frame_to_message, message_to_frame
         from knomly.agent.frames import AgentResponseFrame
+        from knomly.agent.memory import frame_to_message, message_to_frame
 
         original = AgentResponseFrame(
             response_text="Done!",
@@ -899,7 +894,7 @@ class TestMessageToFrame:
 
     def test_restore_returns_none_for_non_serialized(self):
         """Non-serialized messages return None."""
-        from knomly.agent.memory import message_to_frame, Message
+        from knomly.agent.memory import Message, message_to_frame
 
         msg = Message(role="user", content="Hello!")
 
@@ -914,8 +909,8 @@ class TestExecutionMemory:
     @pytest.mark.asyncio
     async def test_persist_and_restore_frames(self):
         """Persist and restore frame history."""
-        from knomly.agent.memory import ExecutionMemory
         from knomly.agent.frames import ToolCallFrame, ToolResultFrame
+        from knomly.agent.memory import ExecutionMemory
 
         memory = ExecutionMemory()
 
@@ -948,8 +943,8 @@ class TestExecutionMemory:
     @pytest.mark.asyncio
     async def test_get_last_state(self):
         """Get execution state summary."""
+        from knomly.agent.frames import AgentResponseFrame, ToolCallFrame, ToolResultFrame
         from knomly.agent.memory import ExecutionMemory
-        from knomly.agent.frames import ToolCallFrame, ToolResultFrame, AgentResponseFrame
 
         memory = ExecutionMemory()
 
@@ -1004,8 +999,8 @@ class TestExecutionMemory:
     @pytest.mark.asyncio
     async def test_clear_session(self):
         """Clear execution session."""
-        from knomly.agent.memory import ExecutionMemory
         from knomly.agent.frames import ToolCallFrame
+        from knomly.agent.memory import ExecutionMemory
 
         memory = ExecutionMemory()
 
@@ -1027,8 +1022,8 @@ class TestExecutionMemory:
     @pytest.mark.asyncio
     async def test_with_redis_storage(self):
         """ExecutionMemory works with Redis storage."""
-        from knomly.agent.memory import ExecutionMemory, InMemoryStorage
         from knomly.agent.frames import ToolCallFrame
+        from knomly.agent.memory import ExecutionMemory, InMemoryStorage
 
         # Use InMemoryStorage as mock for Redis
         storage = InMemoryStorage()
@@ -1055,10 +1050,11 @@ class TestExecutorMemoryIntegration:
     @pytest.mark.asyncio
     async def test_executor_persists_frames(self):
         """Executor persists frames when memory is provided."""
-        from unittest.mock import AsyncMock, MagicMock
+        from unittest.mock import AsyncMock
+
         from knomly.agent import AgentExecutor
-        from knomly.agent.memory import ExecutionMemory, InMemoryStorage
         from knomly.agent.frames import AgentResponseFrame
+        from knomly.agent.memory import ExecutionMemory, InMemoryStorage
 
         # Create mock processor
         mock_processor = MagicMock()
@@ -1097,10 +1093,11 @@ class TestExecutorMemoryIntegration:
     @pytest.mark.asyncio
     async def test_executor_generates_session_id_when_memory_enabled(self):
         """Executor generates session_id when memory enabled but no ID provided."""
-        from unittest.mock import AsyncMock, MagicMock
+        from unittest.mock import AsyncMock
+
         from knomly.agent import AgentExecutor
-        from knomly.agent.memory import ExecutionMemory, InMemoryStorage
         from knomly.agent.frames import AgentResponseFrame
+        from knomly.agent.memory import ExecutionMemory, InMemoryStorage
 
         mock_processor = MagicMock()
         mock_processor.decide = AsyncMock(
@@ -1129,7 +1126,8 @@ class TestExecutorMemoryIntegration:
     @pytest.mark.asyncio
     async def test_executor_without_memory_has_no_persistence(self):
         """Executor without memory doesn't persist anything."""
-        from unittest.mock import AsyncMock, MagicMock
+        from unittest.mock import AsyncMock
+
         from knomly.agent import AgentExecutor
         from knomly.agent.frames import AgentResponseFrame
 

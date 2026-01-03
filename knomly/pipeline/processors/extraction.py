@@ -19,6 +19,7 @@ Design Principle (ADR-004):
     Context data flows through Frame metadata, not PipelineContext.
     The enriched metadata is visible in the Frame stream for debugging.
 """
+
 from __future__ import annotations
 
 import logging
@@ -101,9 +102,9 @@ class ExtractionProcessor(Processor):
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | None:
         from ..frames import ExtractionFrame, TranscriptionFrame
 
         if not isinstance(frame, TranscriptionFrame):
@@ -166,7 +167,7 @@ class ExtractionProcessor(Processor):
             },
         )
 
-    def _build_prompt(self, frame: "Frame", ctx: "PipelineContext") -> str:
+    def _build_prompt(self, frame: Frame, ctx: PipelineContext) -> str:
         """
         Build system prompt, optionally with context injection.
 
@@ -187,7 +188,6 @@ class ExtractionProcessor(Processor):
 
         # Use default prompt or config-based prompt
         if ctx.config:
-            import asyncio
             # Note: This is sync context, so we can't await here
             # In practice, the prompt would be pre-fetched
             pass

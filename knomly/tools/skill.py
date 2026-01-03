@@ -43,13 +43,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Protocol, Sequence, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
-from .base import Tool
 from .generic import OpenAPIToolkit
 
 if TYPE_CHECKING:
-    pass
+    from collections.abc import Sequence
+
+    from .base import Tool
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +152,7 @@ class Skill:
                 return tool
         return None
 
-    def add_tool(self, tool: Tool) -> "Skill":
+    def add_tool(self, tool: Tool) -> Skill:
         """Add a tool to this skill. Returns self for chaining."""
         self.tools.append(tool)
         return self
@@ -204,7 +205,7 @@ class Skill:
         tags: list[str] | None = None,
         timeout: float = 30.0,
         metadata: dict[str, Any] | None = None,
-    ) -> "Skill":
+    ) -> Skill:
         """
         Create a Skill from an OpenAPI specification.
 
@@ -276,7 +277,7 @@ class Skill:
         description: str = "",
         auth: dict[str, str] | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> "Skill":
+    ) -> Skill:
         """
         Create a Skill from existing Tool instances.
 
@@ -346,7 +347,7 @@ class SkillRegistry:
     def __init__(self) -> None:
         self._skills: dict[str, Skill] = {}
 
-    def register(self, skill: Skill) -> "SkillRegistry":
+    def register(self, skill: Skill) -> SkillRegistry:
         """
         Register a skill.
 
@@ -363,7 +364,9 @@ class SkillRegistry:
             raise ValueError(f"Skill '{skill.name}' already registered")
 
         self._skills[skill.name] = skill
-        logger.info(f"[skill_registry] Registered skill '{skill.name}' with {len(skill.tools)} tools")
+        logger.info(
+            f"[skill_registry] Registered skill '{skill.name}' with {len(skill.tools)} tools"
+        )
         return self
 
     def get_skill(self, name: str) -> Skill | None:

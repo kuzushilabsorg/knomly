@@ -8,8 +8,8 @@ This example demonstrates how to create a custom transport adapter:
 
 Run: python -m examples.04-custom-transport.main
 """
+
 import asyncio
-from dataclasses import dataclass
 from typing import Any
 
 from knomly import (
@@ -19,8 +19,7 @@ from knomly import (
     register_transport,
     reset_transport_registry,
 )
-from knomly.pipeline.frames import Frame, AudioInputFrame
-
+from knomly.pipeline.frames import AudioInputFrame
 
 # =============================================================================
 # Custom Transport: Console Transport
@@ -76,10 +75,12 @@ class ConsoleTransport:
         print()
 
         # Store for later inspection
-        self._messages.append({
-            "recipient": recipient,
-            "message": message,
-        })
+        self._messages.append(
+            {
+                "recipient": recipient,
+                "message": message,
+            }
+        )
 
         return SendResult(
             success=True,
@@ -218,7 +219,7 @@ async def main():
     # Register transports
     register_transport(console)
     register_transport(webhook)
-    print(f"Registered transports: console, webhook")
+    print("Registered transports: console, webhook")
     print()
 
     # Use the console transport

@@ -12,17 +12,15 @@ Design Philosophy:
 
 See ADR-001 for design decisions.
 """
+
 from __future__ import annotations
 
 import json
 import logging
-import time
-from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
-from uuid import UUID
 
 if TYPE_CHECKING:
     from .context import PipelineContext
@@ -109,7 +107,7 @@ class JSONLogger:
 
     def _log(self, level: LogLevel, message: str, context: dict[str, Any]) -> None:
         record = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": level.value,
             "message": message,
             **self.extra_context,
@@ -139,7 +137,7 @@ class JSONLogger:
     def error(self, message: str, **context: Any) -> None:
         self._log(LogLevel.ERROR, message, context)
 
-    def with_context(self, **extra: Any) -> "JSONLogger":
+    def with_context(self, **extra: Any) -> JSONLogger:
         """Create a new logger with additional context."""
         return JSONLogger(
             name=self.name,
@@ -540,6 +538,7 @@ class PipelineMetrics:
 
     def get_stats(self) -> dict[str, Any]:
         """Get summary statistics."""
+
         def percentile(data: list[float], p: float) -> float | None:
             if not data:
                 return None
@@ -675,14 +674,14 @@ def set_tracer(tracer: Tracer) -> None:
 
 
 def create_audit_entry(
-    ctx: "PipelineContext",
+    ctx: PipelineContext,
     pipeline_name: str,
     processors: list[str],
-    input_frame: "Frame",
+    input_frame: Frame,
     status: str,
     success: bool | None = None,
     error: str | None = None,
-    output_frames: list["Frame"] | None = None,
+    output_frames: list[Frame] | None = None,
 ) -> AuditEntry:
     """Create an audit entry from pipeline context."""
     return AuditEntry(
@@ -712,25 +711,25 @@ def create_audit_entry(
 # =============================================================================
 
 __all__ = [
-    # Logging
-    "LogLevel",
-    "StructuredLogger",
-    "JSONLogger",
-    "PipelineLogger",
     # Audit
     "AuditEntry",
     "AuditRepository",
     "InMemoryAuditRepository",
-    "create_audit_entry",
-    # Metrics
-    "PipelineMetrics",
-    "get_metrics",
-    "reset_metrics",
-    # Tracing
-    "Span",
-    "Tracer",
+    "JSONLogger",
+    # Logging
+    "LogLevel",
     "NoOpSpan",
     "NoOpTracer",
+    "PipelineLogger",
+    # Metrics
+    "PipelineMetrics",
+    # Tracing
+    "Span",
+    "StructuredLogger",
+    "Tracer",
+    "create_audit_entry",
+    "get_metrics",
     "get_tracer",
+    "reset_metrics",
     "set_tracer",
 ]

@@ -1,6 +1,7 @@
 """
 Tests for Knomly rate limiting module.
 """
+
 import asyncio
 import time
 
@@ -9,13 +10,12 @@ import pytest
 from knomly.pipeline import (
     CompositeRateLimiter,
     InMemoryStorage,
-    RateLimitExceeded,
     RateLimiter,
+    RateLimitExceeded,
     SlidingWindowLimiter,
     TokenBucket,
     rate_limited,
 )
-
 
 # =============================================================================
 # TokenBucket Tests
@@ -380,14 +380,16 @@ class TestCompositeRateLimiter:
         limiter1 = RateLimiter(rate=10.0, capacity=10)
         limiter2 = RateLimiter(rate=10.0, capacity=5)
 
-        composite = CompositeRateLimiter([
-            (limiter1, lambda ctx: f"limiter1:{ctx}"),
-            (limiter2, lambda ctx: f"limiter2:{ctx}"),
-        ])
+        composite = CompositeRateLimiter(
+            [
+                (limiter1, lambda ctx: f"limiter1:{ctx}"),
+                (limiter2, lambda ctx: f"limiter2:{ctx}"),
+            ]
+        )
 
         # First 5 should succeed (limited by limiter2's capacity)
         for i in range(5):
-            success = await composite.acquire(f"test")
+            success = await composite.acquire("test")
             assert success is True, f"Request {i} should succeed"
 
         # Next should fail (limiter2 exhausted)
@@ -399,10 +401,12 @@ class TestCompositeRateLimiter:
         limiter1 = RateLimiter(rate=10.0, capacity=2)
         limiter2 = RateLimiter(rate=10.0, capacity=10)
 
-        composite = CompositeRateLimiter([
-            (limiter1, lambda ctx: "global"),  # Shared key
-            (limiter2, lambda ctx: f"user:{ctx}"),  # Per-context key
-        ])
+        composite = CompositeRateLimiter(
+            [
+                (limiter1, lambda ctx: "global"),  # Shared key
+                (limiter2, lambda ctx: f"user:{ctx}"),  # Per-context key
+            ]
+        )
 
         # User A uses 2 requests
         await composite.acquire("user_a")
@@ -485,9 +489,7 @@ class TestRateLimitingIntegration:
             return (request_id, success)
 
         # Make 10 concurrent requests
-        results = await asyncio.gather(
-            *[make_request(i) for i in range(10)]
-        )
+        results = await asyncio.gather(*[make_request(i) for i in range(10)])
 
         successes = [r for r in results if r[1]]
         failures = [r for r in results if not r[1]]

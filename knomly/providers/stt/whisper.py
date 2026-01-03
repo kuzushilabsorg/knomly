@@ -3,18 +3,19 @@ Whisper STT Provider for Knomly.
 
 Uses OpenAI's Whisper API for speech transcription and translation.
 """
+
 from __future__ import annotations
 
 import io
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from .base import BaseSTTProvider, TranscriptionResult
 
 logger = logging.getLogger(__name__)
 
 # Whisper supported languages (ISO 639-1 codes)
-WHISPER_LANGUAGES: Dict[str, str] = {
+WHISPER_LANGUAGES: dict[str, str] = {
     "af": "Afrikaans",
     "ar": "Arabic",
     "hy": "Armenian",
@@ -157,7 +158,7 @@ class WhisperSTTProvider(BaseSTTProvider):
         }
         return mime_to_ext.get(mime_type.lower(), "mp3")
 
-    def _extract_words(self, response: Any) -> Optional[List[Dict[str, Any]]]:
+    def _extract_words(self, response: Any) -> list[dict[str, Any]] | None:
         """Extract word-level data from verbose_json response."""
         try:
             if hasattr(response, "words") and response.words:
@@ -175,17 +176,19 @@ class WhisperSTTProvider(BaseSTTProvider):
                 for segment in response.segments:
                     if hasattr(segment, "words") and segment.words:
                         for w in segment.words:
-                            words.append({
-                                "word": w.word,
-                                "start": w.start,
-                                "end": w.end,
-                            })
+                            words.append(
+                                {
+                                    "word": w.word,
+                                    "start": w.start,
+                                    "end": w.end,
+                                }
+                            )
                 return words if words else None
         except (AttributeError, TypeError):
             pass
         return None
 
-    def _extract_duration(self, response: Any) -> Optional[int]:
+    def _extract_duration(self, response: Any) -> int | None:
         """Extract audio duration from response."""
         try:
             if hasattr(response, "duration"):
@@ -198,7 +201,7 @@ class WhisperSTTProvider(BaseSTTProvider):
         self,
         audio_bytes: bytes,
         mime_type: str = "audio/ogg",
-        language_hint: Optional[str] = None,
+        language_hint: str | None = None,
     ) -> TranscriptionResult:
         """
         Transcribe audio using Whisper.
@@ -253,8 +256,7 @@ class WhisperSTTProvider(BaseSTTProvider):
                 duration_ms = None
 
             logger.debug(
-                f"Whisper transcription: {len(text)} chars, "
-                f"language={detected_language}"
+                f"Whisper transcription: {len(text)} chars, " f"language={detected_language}"
             )
 
             return TranscriptionResult(
@@ -390,7 +392,7 @@ class WhisperSTTProvider(BaseSTTProvider):
 
 
 __all__ = [
+    "WHISPER_LANGUAGES",
     "WhisperSTTProvider",
     "get_language_name",
-    "WHISPER_LANGUAGES",
 ]

@@ -9,42 +9,35 @@ Tests cover:
 - Integration with pipeline
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
-from uuid import uuid4
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from knomly.integrations.base import (
+    IntegrationError,
+)
 from knomly.integrations.plane import (
     PlaneClient,
     PlaneConfig,
     WorkItem,
-    WorkItemCreate,
-    WorkItemPriority,
-)
-from knomly.integrations.base import (
-    IntegrationError,
-    AuthenticationError,
-    RateLimitError,
-    NotFoundError,
-)
-from knomly.pipeline.frames.task import (
-    TaskFrame,
-    TaskQueryFrame,
-    TaskResultFrame,
-    TaskData,
-    TaskPriority,
-    TaskStatus,
-    TaskOperation,
-    TaskActionFrame,
-)
-from knomly.pipeline.processors.integrations.plane import (
-    PlaneProcessor,
-    TaskCreatorProcessor,
-    PlaneMappings,
 )
 from knomly.pipeline.context import PipelineContext
 from knomly.pipeline.frames.processing import ExtractionFrame
-
+from knomly.pipeline.frames.task import (
+    TaskActionFrame,
+    TaskFrame,
+    TaskOperation,
+    TaskPriority,
+    TaskQueryFrame,
+    TaskResultFrame,
+    TaskStatus,
+)
+from knomly.pipeline.processors.integrations.plane import (
+    PlaneMappings,
+    PlaneProcessor,
+    TaskCreatorProcessor,
+)
 
 # =============================================================================
 # Fixtures
@@ -278,9 +271,7 @@ class TestPlaneClient:
             "_request",
             new_callable=AsyncMock,
         ) as mock_request:
-            mock_request.return_value = MagicMock(
-                json=lambda: mock_work_item.model_dump()
-            )
+            mock_request.return_value = MagicMock(json=lambda: mock_work_item.model_dump())
 
             result = await mock_plane_client.create_work_item(
                 project_id="project-456",
@@ -326,7 +317,9 @@ class TestPlaneProcessor:
     """Tests for PlaneProcessor with generic TaskFrame."""
 
     @pytest.mark.asyncio
-    async def test_creates_task_from_generic_frame(self, mock_plane_client, mock_work_item, pipeline_context):
+    async def test_creates_task_from_generic_frame(
+        self, mock_plane_client, mock_work_item, pipeline_context
+    ):
         """Test creating task from generic TaskFrame."""
         with patch.object(
             mock_plane_client,
@@ -357,7 +350,9 @@ class TestPlaneProcessor:
             assert result.source_frame_id == frame.id
 
     @pytest.mark.asyncio
-    async def test_lists_tasks_from_generic_query(self, mock_plane_client, mock_work_item, pipeline_context):
+    async def test_lists_tasks_from_generic_query(
+        self, mock_plane_client, mock_work_item, pipeline_context
+    ):
         """Test listing tasks from generic TaskQueryFrame."""
         from knomly.integrations.plane.schemas import WorkItemList
 
@@ -420,6 +415,7 @@ class TestPlaneProcessor:
 
         # Pass a non-task frame
         from knomly.pipeline.frames.base import Frame
+
         frame = Frame()
 
         result = await processor.process(frame, pipeline_context)
@@ -517,7 +513,9 @@ class TestPlaneIntegration:
     """Integration tests for Plane in pipeline context."""
 
     @pytest.mark.asyncio
-    async def test_full_pipeline_flow_with_generic_frames(self, mock_plane_client, mock_work_item, pipeline_context):
+    async def test_full_pipeline_flow_with_generic_frames(
+        self, mock_plane_client, mock_work_item, pipeline_context
+    ):
         """Test full pipeline from extraction to task creation using generic frames."""
         from knomly.pipeline import PipelineBuilder
 
@@ -551,7 +549,9 @@ class TestPlaneIntegration:
             assert result.output_frames[0].platform == "plane"
 
     @pytest.mark.asyncio
-    async def test_processor_swappability(self, mock_plane_client, mock_work_item, pipeline_context):
+    async def test_processor_swappability(
+        self, mock_plane_client, mock_work_item, pipeline_context
+    ):
         """Test that generic frames allow processor swapping."""
         # This test demonstrates that the same TaskFrame can work with different processors
         with patch.object(

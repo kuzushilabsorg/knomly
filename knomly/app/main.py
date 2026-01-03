@@ -3,11 +3,12 @@ Knomly - Voice-First AI Operations Assistant
 
 FastAPI application entry point.
 """
+
 from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -75,7 +76,7 @@ app.include_router(twilio_router, prefix="/api/v1")
 
 
 @app.get("/", tags=["root"])
-async def root() -> Dict[str, str]:
+async def root() -> dict[str, str]:
     """Root endpoint with service info."""
     return {
         "service": "knomly",
@@ -85,7 +86,7 @@ async def root() -> Dict[str, str]:
 
 
 @app.get("/health", tags=["health"])
-async def health_check() -> Dict[str, Any]:
+async def health_check() -> dict[str, Any]:
     """
     Health check endpoint.
 
@@ -112,7 +113,7 @@ async def health_check() -> Dict[str, Any]:
 
 
 @app.get("/api/v1/prompts", tags=["config"])
-async def list_prompts() -> Dict[str, Any]:
+async def list_prompts() -> dict[str, Any]:
     """List all configured prompts."""
     from knomly.app.dependencies import get_config_service
 
@@ -124,7 +125,7 @@ async def list_prompts() -> Dict[str, Any]:
 
 
 @app.get("/api/v1/users", tags=["config"])
-async def list_users() -> Dict[str, Any]:
+async def list_users() -> dict[str, Any]:
     """List all configured users."""
     from knomly.app.dependencies import get_config_service
 

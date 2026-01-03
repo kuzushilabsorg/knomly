@@ -3,11 +3,11 @@ Zulip Chat Provider for Knomly.
 
 Uses Zulip's REST API for posting messages to streams.
 """
+
 from __future__ import annotations
 
 import base64
 import logging
-from typing import Any, Dict, List, Optional
 
 import httpx
 
@@ -50,7 +50,7 @@ class ZulipChatProvider(BaseChatProvider):
         self._site = site.rstrip("/")
         self._bot_email = bot_email
         self._api_key = api_key
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
     @property
     def name(self) -> str:
@@ -145,7 +145,7 @@ class ZulipChatProvider(BaseChatProvider):
 
     async def send_private_message(
         self,
-        recipients: List[str],
+        recipients: list[str],
         content: str,
     ) -> MessageResult:
         """
@@ -199,7 +199,7 @@ class ZulipChatProvider(BaseChatProvider):
                 error=str(e),
             )
 
-    async def list_streams(self) -> List[StreamInfo]:
+    async def list_streams(self) -> list[StreamInfo]:
         """
         List all subscribed streams.
 
@@ -232,7 +232,7 @@ class ZulipChatProvider(BaseChatProvider):
             logger.error(f"Zulip list streams error: {e}", exc_info=True)
             return []
 
-    async def get_stream_topics(self, stream: str) -> List[str]:
+    async def get_stream_topics(self, stream: str) -> list[str]:
         """
         Get topics in a stream.
 

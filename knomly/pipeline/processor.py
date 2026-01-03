@@ -6,11 +6,13 @@ Adapted from Pipecat patterns for HTTP request/response context.
 
 See ADR-001 for design decisions.
 """
+
 from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Sequence
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .context import PipelineContext
@@ -56,7 +58,7 @@ class Processor(ABC):
         """Unique name for this processor, used in logging and metrics."""
         ...
 
-    async def initialize(self, context: "PipelineContext") -> None:
+    async def initialize(self, context: PipelineContext) -> None:
         """
         Initialize processor with pipeline context.
 
@@ -85,8 +87,8 @@ class Processor(ABC):
     @abstractmethod
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
+        frame: Frame,
+        ctx: PipelineContext,
     ) -> ProcessorResult:
         """
         Transform input frame.
@@ -107,9 +109,9 @@ class Processor(ABC):
 
     async def process_frame(
         self,
-        frame: "Frame",
-        context: "PipelineContext",
-    ) -> AsyncIterator["Frame"]:
+        frame: Frame,
+        context: PipelineContext,
+    ) -> AsyncIterator[Frame]:
         """
         Async generator wrapper for pipeline compatibility.
 
@@ -131,7 +133,7 @@ class Processor(ABC):
             if result is None:
                 # None = frame consumed, stop propagation
                 return
-            elif isinstance(result, Sequence) and not isinstance(result, (str, bytes)):
+            elif isinstance(result, Sequence) and not isinstance(result, str | bytes):
                 # Sequence of frames - yield each
                 for output_frame in result:
                     yield output_frame
@@ -167,7 +169,7 @@ class PassthroughProcessor(Processor):
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
+        frame: Frame,
+        ctx: PipelineContext,
     ) -> ProcessorResult:
         return frame

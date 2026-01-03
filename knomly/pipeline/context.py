@@ -6,22 +6,24 @@ for all processors in the pipeline.
 
 See ADR-001 for design decisions.
 """
+
 from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 if TYPE_CHECKING:
-    from knomly.providers.registry import ProviderRegistry
     from knomly.config.service import ConfigurationService
+    from knomly.providers.registry import ProviderRegistry
+
     from .routing import RoutingDecision
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 @dataclass
@@ -62,22 +64,24 @@ class PipelineContext:
     # Audit trail
     processor_timings: dict[str, float] = field(default_factory=dict)
     frame_log: list[dict[str, Any]] = field(default_factory=list)
-    routing_decisions: list["RoutingDecision"] = field(default_factory=list)
+    routing_decisions: list[RoutingDecision] = field(default_factory=list)
 
     @property
     def elapsed_ms(self) -> float:
         """Milliseconds since pipeline started."""
-        delta = datetime.now(timezone.utc) - self.started_at
+        delta = datetime.now(UTC) - self.started_at
         return delta.total_seconds() * 1000
 
     def record_frame(self, frame_dict: dict[str, Any], processor_name: str) -> None:
         """Record a frame in the audit trail."""
-        self.frame_log.append({
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "processor": processor_name,
-            "frame": frame_dict,
-            "elapsed_ms": self.elapsed_ms,
-        })
+        self.frame_log.append(
+            {
+                "timestamp": datetime.now(UTC).isoformat(),
+                "processor": processor_name,
+                "frame": frame_dict,
+                "elapsed_ms": self.elapsed_ms,
+            }
+        )
 
     def record_timing(self, processor_name: str, duration_ms: float) -> None:
         """Record processor execution timing."""
@@ -88,7 +92,7 @@ class PipelineContext:
         return {
             "execution_id": str(self.execution_id),
             "started_at": self.started_at.isoformat(),
-            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "completed_at": datetime.now(UTC).isoformat(),
             "duration_ms": self.elapsed_ms,
             "sender_phone": self.sender_phone,
             "message_type": self.message_type,
@@ -100,7 +104,7 @@ class PipelineContext:
             "routing_decisions": [d.to_dict() for d in self.routing_decisions],
         }
 
-    def copy(self) -> "PipelineContext":
+    def copy(self) -> PipelineContext:
         """
         Create an isolated copy for background execution.
 

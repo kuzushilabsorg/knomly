@@ -3,6 +3,7 @@ Zulip Processor for Knomly.
 
 Posts standup messages to Zulip.
 """
+
 from __future__ import annotations
 
 import logging
@@ -40,9 +41,9 @@ class ZulipProcessor(Processor):
 
     async def process(
         self,
-        frame: "Frame",
-        ctx: "PipelineContext",
-    ) -> "Frame | None":
+        frame: Frame,
+        ctx: PipelineContext,
+    ) -> Frame | None:
         from ..frames import ExtractionFrame, ZulipMessageFrame
 
         if not isinstance(frame, ExtractionFrame):
@@ -69,8 +70,7 @@ class ZulipProcessor(Processor):
         content = frame.format_zulip_message()
 
         logger.info(
-            f"Posting to {frame.zulip_stream} > {frame.zulip_topic} "
-            f"({len(content)} chars)"
+            f"Posting to {frame.zulip_stream} > {frame.zulip_topic} " f"({len(content)} chars)"
         )
 
         result = await chat.send_message(

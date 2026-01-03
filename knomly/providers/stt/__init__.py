@@ -8,18 +8,18 @@ Provides multiple speech-to-text implementations:
 """
 
 from .base import BaseSTTProvider, STTProvider, TranscriptionResult
+from .deepgram import DeepgramStreamingSTTProvider, DeepgramSTTProvider
 from .gemini import GeminiSTTProvider
-from .deepgram import DeepgramSTTProvider, DeepgramStreamingSTTProvider
 from .whisper import WhisperSTTProvider
 
 __all__ = [
-    # Protocol and base
-    "STTProvider",
     "BaseSTTProvider",
-    "TranscriptionResult",
-    # Implementations
-    "GeminiSTTProvider",
     "DeepgramSTTProvider",
     "DeepgramStreamingSTTProvider",
+    # Implementations
+    "GeminiSTTProvider",
+    # Protocol and base
+    "STTProvider",
+    "TranscriptionResult",
     "WhisperSTTProvider",
 ]

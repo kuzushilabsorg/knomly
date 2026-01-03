@@ -51,9 +51,8 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
-from urllib.parse import urljoin, urlencode
 
 import httpx
 
@@ -336,9 +335,7 @@ class OpenAPIOperationTool(Tool):
             )
 
             # Log response
-            logger.info(
-                f"[openapi_tool:{self.name}] Response: {response.status_code}"
-            )
+            logger.info(f"[openapi_tool:{self.name}] Response: {response.status_code}")
 
             # Handle error responses
             if response.status_code >= 400:
@@ -408,20 +405,10 @@ class OpenAPIOperationTool(Tool):
         self._add_auth_headers(headers)
 
         # Categorize parameters by location
-        path_params = {
-            p["name"]: p
-            for p in self._operation.parameters
-            if p.get("in") == "path"
-        }
-        query_params = {
-            p["name"]: p
-            for p in self._operation.parameters
-            if p.get("in") == "query"
-        }
+        path_params = {p["name"]: p for p in self._operation.parameters if p.get("in") == "path"}
+        query_params = {p["name"]: p for p in self._operation.parameters if p.get("in") == "query"}
         header_params = {
-            p["name"]: p
-            for p in self._operation.parameters
-            if p.get("in") == "header"
+            p["name"]: p for p in self._operation.parameters if p.get("in") == "header"
         }
 
         # Distribute arguments
@@ -445,9 +432,7 @@ class OpenAPIOperationTool(Tool):
         # Ensure all path parameters are substituted
         if "{" in path:
             missing = re.findall(r"\{(\w+)\}", path)
-            logger.warning(
-                f"[openapi_tool:{self.name}] Missing path params: {missing}"
-            )
+            logger.warning(f"[openapi_tool:{self.name}] Missing path params: {missing}")
 
         url = f"{self._base_url}{path}"
 
@@ -605,7 +590,7 @@ class OpenAPIToolkit:
         tags: list[str] | None = None,
         timeout: float = 30.0,
         http_client: httpx.AsyncClient | None = None,
-    ) -> "OpenAPIToolkit":
+    ) -> OpenAPIToolkit:
         """
         Create toolkit from OpenAPI spec dict.
 
@@ -670,9 +655,7 @@ class OpenAPIToolkit:
                 all_params = [*path_params, *op.get("parameters", [])]
 
                 # Resolve parameter refs
-                resolved_params = tuple(
-                    resolver.resolve(p) for p in all_params
-                )
+                resolved_params = tuple(resolver.resolve(p) for p in all_params)
 
                 # Parse request body
                 request_body = op.get("requestBody")
@@ -687,9 +670,7 @@ class OpenAPIToolkit:
                     # Prefer JSON content
                     for content_type in ("application/json", "application/x-www-form-urlencoded"):
                         if content_type in content:
-                            body_schema = resolver.resolve(
-                                content[content_type].get("schema", {})
-                            )
+                            body_schema = resolver.resolve(content[content_type].get("schema", {}))
                             break
 
                 # Parse success response schema
@@ -720,9 +701,7 @@ class OpenAPIToolkit:
                 )
                 parsed_ops.append(parsed_op)
 
-        logger.info(
-            f"[openapi_toolkit] Parsed {len(parsed_ops)} operations from spec"
-        )
+        logger.info(f"[openapi_toolkit] Parsed {len(parsed_ops)} operations from spec")
 
         return cls(
             operations=parsed_ops,
@@ -746,7 +725,7 @@ class OpenAPIToolkit:
         tags: list[str] | None = None,
         timeout: float = 30.0,
         http_client: httpx.AsyncClient | None = None,
-    ) -> "OpenAPIToolkit":
+    ) -> OpenAPIToolkit:
         """
         Create toolkit from OpenAPI spec URL.
 
@@ -813,8 +792,7 @@ class OpenAPIToolkit:
             if operation_id not in self._operations:
                 available = list(self._operations.keys())[:5]
                 raise KeyError(
-                    f"Unknown operation: '{operation_id}'. "
-                    f"Available: {available}..."
+                    f"Unknown operation: '{operation_id}'. " f"Available: {available}..."
                 )
 
             self._tools[operation_id] = OpenAPIOperationTool(
@@ -876,11 +854,7 @@ class OpenAPIToolkit:
         if not tags:
             return list(self._operations.keys())
 
-        return [
-            op_id
-            for op_id, op in self._operations.items()
-            if any(t in op.tags for t in tags)
-        ]
+        return [op_id for op_id, op in self._operations.items() if any(t in op.tags for t in tags)]
 
     def get_operations_by_tag(self) -> dict[str, list[str]]:
         """
@@ -937,10 +911,7 @@ class _RefResolver:
 
         if "$ref" not in obj:
             # Recursively resolve nested objects
-            return {
-                k: self.resolve(v) if isinstance(v, (dict, list)) else v
-                for k, v in obj.items()
-            }
+            return {k: self.resolve(v) if isinstance(v, dict | list) else v for k, v in obj.items()}
 
         ref = obj["$ref"]
 

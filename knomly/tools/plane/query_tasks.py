@@ -61,8 +61,8 @@ class PlaneQueryTasksTool(Tool):
     def __init__(
         self,
         *,
-        client: "PlaneClient",
-        cache: "PlaneEntityCache",
+        client: PlaneClient,
+        cache: PlaneEntityCache,
     ):
         """
         Initialize the tool.
@@ -122,8 +122,7 @@ class PlaneQueryTasksTool(Tool):
                 "assignee": {
                     "type": "string",
                     "description": (
-                        "Filter by assignee name or email (optional). "
-                        "Leave empty to show all."
+                        "Filter by assignee name or email (optional). " "Leave empty to show all."
                     ),
                     "default": "",
                 },
@@ -185,7 +184,7 @@ class PlaneQueryTasksTool(Tool):
         try:
             # Extract arguments
             project_name = arguments.get("project", "").strip()
-            status = arguments.get("status", "").strip()
+            arguments.get("status", "").strip()
             priority = arguments.get("priority", "").strip()
             assignee = arguments.get("assignee", "").strip()
             limit = min(arguments.get("limit", 10), 50)
@@ -199,8 +198,7 @@ class PlaneQueryTasksTool(Tool):
             if not project_id:
                 available = list(self._cache.get_project_mapping().keys())[:5]
                 return ToolResult.error(
-                    f"Unknown project: '{project_name}'. "
-                    f"Available projects: {available}"
+                    f"Unknown project: '{project_name}'. " f"Available projects: {available}"
                 )
 
             # Resolve assignee to ID (optional)
@@ -209,14 +207,11 @@ class PlaneQueryTasksTool(Tool):
                 assignee_id = self._cache.resolve_user(assignee)
                 if not assignee_id:
                     logger.warning(
-                        f"[plane_query_tasks] Unknown assignee: {assignee}. "
-                        f"Ignoring filter."
+                        f"[plane_query_tasks] Unknown assignee: {assignee}. " f"Ignoring filter."
                     )
 
             # Query tasks
-            logger.info(
-                f"[plane_query_tasks] Querying tasks from project {project_id}"
-            )
+            logger.info(f"[plane_query_tasks] Querying tasks from project {project_id}")
 
             result = await self._client.list_work_items(
                 project_id=project_id,
@@ -253,9 +248,7 @@ class PlaneQueryTasksTool(Tool):
                     lines.append(f"(More tasks available, showing first {limit})")
                 text = "\n".join(lines)
 
-            logger.info(
-                f"[plane_query_tasks] Found {len(tasks)} tasks in project {project_id}"
-            )
+            logger.info(f"[plane_query_tasks] Found {len(tasks)} tasks in project {project_id}")
 
             return ToolResult.success(
                 text=text,

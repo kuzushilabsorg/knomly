@@ -1,11 +1,11 @@
 """
 Tests for IntentClassifierProcessor.
 """
+
 import pytest
-from unittest.mock import AsyncMock
 
 from knomly.pipeline.context import PipelineContext
-from knomly.pipeline.frames import TranscriptionFrame, Frame
+from knomly.pipeline.frames import Frame, TranscriptionFrame
 from knomly.pipeline.processors import (
     Intent,
     IntentClassifierProcessor,
@@ -168,7 +168,7 @@ class TestIntentClassifierProcessor:
             english_text="Test",
         )
         ctx = PipelineContext()
-        ctx.providers = MockProviderRegistry('not valid json')
+        ctx.providers = MockProviderRegistry("not valid json")
 
         result = await processor.process(frame, ctx)
 

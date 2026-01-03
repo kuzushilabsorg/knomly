@@ -3,13 +3,13 @@ Tests for Knomly providers.
 
 Tests provider registration, protocols, and implementations.
 """
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from knomly.providers import ProviderRegistry
-from knomly.providers.stt import STTProvider, TranscriptionResult
-from knomly.providers.llm import LLMConfig, LLMProvider, LLMResponse, Message
-from knomly.providers.chat import ChatProvider, MessageResult
+from knomly.providers.chat import MessageResult
+from knomly.providers.llm import LLMConfig, LLMResponse, Message
+from knomly.providers.stt import TranscriptionResult
 
 
 class MockSTTProvider:

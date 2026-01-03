@@ -42,11 +42,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
 from knomly.pipeline.frames.base import Frame
 
+if TYPE_CHECKING:
+    from uuid import UUID
 
 # =============================================================================
 # Enums
@@ -63,7 +64,7 @@ class TaskPriority(str, Enum):
     NONE = "none"
 
     @classmethod
-    def from_string(cls, value: str) -> "TaskPriority":
+    def from_string(cls, value: str) -> TaskPriority:
         """Convert string to priority, with fallback."""
         if not value:
             return cls.NONE
@@ -84,7 +85,7 @@ class TaskStatus(str, Enum):
     CANCELLED = "cancelled"
 
     @classmethod
-    def from_string(cls, value: str) -> "TaskStatus":
+    def from_string(cls, value: str) -> TaskStatus:
         """Convert string to status, with fallback."""
         if not value:
             return cls.TODO
@@ -180,7 +181,7 @@ class TaskFrame(Frame):
         self,
         task_id: str,
         **updates,
-    ) -> "TaskFrame":
+    ) -> TaskFrame:
         """Create an update frame for an existing task."""
         return TaskFrame(
             operation=TaskOperation.UPDATE,
@@ -271,7 +272,7 @@ class TaskResultFrame(Frame):
     project_id: str = ""
 
     # For list operations
-    tasks: tuple["TaskData", ...] = ()
+    tasks: tuple[TaskData, ...] = ()
     total_count: int = 0
     has_more: bool = False
     next_cursor: str = ""
@@ -366,7 +367,7 @@ class TaskActionFrame(Frame):
         return "TaskActionFrame"
 
     @classmethod
-    def from_result(cls, result: TaskResultFrame) -> "TaskActionFrame":
+    def from_result(cls, result: TaskResultFrame) -> TaskActionFrame:
         """Create action frame from task result."""
         if result.operation == TaskOperation.LIST:
             return cls(
@@ -382,7 +383,11 @@ class TaskActionFrame(Frame):
                 error_message=result.error_message,
             )
         else:
-            action = result.operation.value if isinstance(result.operation, TaskOperation) else str(result.operation)
+            action = (
+                result.operation.value
+                if isinstance(result.operation, TaskOperation)
+                else str(result.operation)
+            )
             return cls(
                 action=action + "d",  # create → created
                 success=result.success,
@@ -391,7 +396,9 @@ class TaskActionFrame(Frame):
                 task_count=1 if result.success else 0,
                 task_ids=(result.task_id,) if result.task_id else (),
                 task_names=(result.task_name,) if result.task_name else (),
-                summary=f"{action.capitalize()}d task: {result.task_name}" if result.success else f"Failed: {result.error_message}",
+                summary=f"{action.capitalize()}d task: {result.task_name}"
+                if result.success
+                else f"Failed: {result.error_message}",
                 source_frame_id=result.source_frame_id,
                 error_message=result.error_message,
             )

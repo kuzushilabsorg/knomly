@@ -116,7 +116,7 @@ class ProviderDefinition(BaseModel):
         language: str = "en",
         auth_secret_key: str | None = None,
         **params: Any,
-    ) -> "ProviderDefinition":
+    ) -> ProviderDefinition:
         """Factory for STT provider definition."""
         all_params = {"language": language, **params}
         if model:
@@ -137,7 +137,7 @@ class ProviderDefinition(BaseModel):
         temperature: float = 0.7,
         auth_secret_key: str | None = None,
         **params: Any,
-    ) -> "ProviderDefinition":
+    ) -> ProviderDefinition:
         """Factory for LLM provider definition."""
         return cls(
             provider_type="llm",
@@ -158,7 +158,7 @@ class ProviderDefinition(BaseModel):
         model: str | None = None,
         auth_secret_key: str | None = None,
         **params: Any,
-    ) -> "ProviderDefinition":
+    ) -> ProviderDefinition:
         """Factory for TTS provider definition."""
         all_params = {**params}
         if voice_id:
@@ -179,7 +179,7 @@ class ProviderDefinition(BaseModel):
         provider_code: str,
         auth_secret_key: str | None = None,
         **params: Any,
-    ) -> "ProviderDefinition":
+    ) -> ProviderDefinition:
         """Factory for Chat provider definition."""
         return cls(
             provider_type="chat",
